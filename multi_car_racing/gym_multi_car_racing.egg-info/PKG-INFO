@@ -1,0 +1,11 @@
+Metadata-Version: 2.1
+Name: gym_multi_car_racing
+Version: 0.0.1
+Summary: Gym Multi Car Racing Environment
+Home-page: https://github.com/igilitschenski/multi_car_racing
+License-File: LICENSE
+License-File: AUTHORS
+Requires-Dist: box2d-py~=2.3.5
+Requires-Dist: shapely~=1.7.0
+Requires-Dist: numpy>=1.10.4
+Requires-Dist: gym~=0.17.2
