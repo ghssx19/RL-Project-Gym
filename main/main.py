@@ -193,9 +193,14 @@ class PitStopDecisionEnv(gym.Env):
             else:
                 reward -= 10.0  # Negative reward for risking running out
         elif action == 1:  # Pit stop
-            reward -= 5.0  # Negative reward for pitting (cost)
-            self.fuel_level = 1.0
-            self.tire_tread_level = 1.0
+            if self.fuel_level < 0.1 or self.tire_tread_level < 0.1:
+                reward += 10.0
+                self.fuel_level = 1.0
+                self.tire_tread_level = 1.0
+            else:
+                reward -= 10  # Negative reward for pitting (cost)
+                self.fuel_level = 1.0
+                self.tire_tread_level = 1.0
 
         # Check if out of fuel or tires
         if self.fuel_level <= 0.0 or self.tire_tread_level <= 0.0:
@@ -271,6 +276,9 @@ while not done:
         if step_counter % 100 == 0:
             if pit_action == 1:
                 print(f"Car {i} should pit according to the RL agent.")
+                if pit_action == 1:  # Pit stop
+                    print(f"Car {i} is pitting! Resetting fuel and tire levels.")
+
             else:
                 print(f"Car {i} should continue driving according to the RL agent.")
 
