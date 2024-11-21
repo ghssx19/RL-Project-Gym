@@ -4,12 +4,18 @@ from gym_multi_car_racing import MultiCarRacing
 
 from gym.wrappers import TimeLimit
 from sb3_contrib import RecurrentPPO
+from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 from gym.wrappers import GrayScaleObservation, ResizeObservation, FrameStack
 import numpy as np
 import time
 import warnings
+import os
 
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+
+FPS = 50
 # Monkey-patch gym.spaces.Box to have 'shape' attribute if it doesn't exist
 if not hasattr(gym.spaces.Box, "shape"):
 
@@ -104,14 +110,23 @@ multi_env = MultiCarRacing(
 )
 
 # Set the maximum number of steps per episode
-max_steps_per_episode = 2000  # Adjust as needed
+max_steps_per_episode = 1000  # Adjust as needed
 
 # Wrap the environment with TimeLimit to set the maximum episode steps
 multi_env = TimeLimit(multi_env, max_episode_steps=max_steps_per_episode)
 
+# Initialize variables for fuel and tire levels
+num_agents = 2
+fuel_levels = [1.0 for _ in range(num_agents)]  # Start with full fuel tanks
+tire_tread_levels = [1.0 for _ in range(num_agents)]  # Start with new tires
+
+# Define consumption rates
+fuel_consumption_rate = 0.009  # Adjust as needed
+tire_wear_rate = 0.009  # Adjust as needed
+
 # Create per-agent environments
 agent_envs = []
-for agent_id in range(2):
+for agent_id in range(num_agents):
     agent_env = SingleAgentWrapper(multi_env, agent_id)
     agent_env = ResizeObservation(agent_env, 64)
     agent_env = GrayScaleObservation(agent_env, keep_dim=True)
@@ -137,29 +152,132 @@ for i, path in enumerate(low_level_model_paths):
         )
     low_level_models.append(model)
 
+# Define the custom environment for the higher-level RL agent
+import gym
+from gym import spaces
+
+
+class PitStopDecisionEnv(gym.Env):
+    def __init__(self):
+        super(PitStopDecisionEnv, self).__init__()
+        # Observation space: fuel level and tire tread level
+        self.observation_space = spaces.Box(
+            low=0.0, high=1.0, shape=(2,), dtype=np.float32
+        )
+        # Action space: 0 (continue driving), 1 (pit stop)
+        self.action_space = spaces.Discrete(2)
+        # Initialize environment state
+        self.reset()
+
+    def reset(self):
+        # Reset fuel and tire levels
+        self.fuel_level = 1.0
+        self.tire_tread_level = 1.0
+        self.done = False
+        return np.array([self.fuel_level, self.tire_tread_level], dtype=np.float32)
+
+    def step(self, action):
+        # Simulate fuel consumption and tire wear
+        dt = 1.0  # Time step
+        self.fuel_level -= fuel_consumption_rate * dt
+        self.tire_tread_level -= tire_wear_rate * dt
+        self.fuel_level = max(self.fuel_level, 0.0)
+        self.tire_tread_level = max(self.tire_tread_level, 0.0)
+        # print(fuel_levels, tire_tread_levels)
+
+        reward = 0.0
+        if action == 0:  # Continue driving
+            if self.fuel_level > 0.1 and self.tire_tread_level > 0.1:
+                reward += 1.0  # Positive reward for safe driving
+            else:
+                reward -= 10.0  # Negative reward for risking running out
+        elif action == 1:  # Pit stop
+            reward -= 5.0  # Negative reward for pitting (cost)
+            self.fuel_level = 1.0
+            self.tire_tread_level = 1.0
+
+        # Check if out of fuel or tires
+        if self.fuel_level <= 0.0 or self.tire_tread_level <= 0.0:
+            self.done = True
+            reward -= 100.0  # Large penalty for running out
+
+        observation = np.array(
+            [self.fuel_level, self.tire_tread_level], dtype=np.float32
+        )
+        return observation, reward, self.done, {}
+
+    def render(self, mode="human"):
+        pass  # No rendering needed
+
+
+# Train the higher-level RL agent
+print("Training the Higher-Level RL Agent...")
+from stable_baselines3 import PPO
+
+# Create the environment
+pit_env = PitStopDecisionEnv()
+
+# Create the PPO model
+pit_model = PPO("MlpPolicy", pit_env, verbose=1)
+
+# Train the model
+pit_model.learn(total_timesteps=1000)
+
+# Save the trained model
+pit_model.save("pit_stop_rl_agent")
+print("Higher-level RL agent trained and saved as 'pit_stop_rl_agent'")
+
+# Load the trained higher-level RL agent
+pit_model = PPO.load("pit_stop_rl_agent")
+
 # Run the simulation
 print("Running Pre-Trained Models...")
 obs = [env.reset() for env in agent_envs]
-states = [None, None]
-episode_starts = [True, True]
-total_rewards = [0, 0]
+states = [None for _ in range(num_agents)]
+episode_starts = [True for _ in range(num_agents)]
+total_rewards = [0 for _ in range(num_agents)]
 done = False
-
+step_counter = 0
 while not done:
     actions = []
-    for i in range(2):
+    for i in range(num_agents):
+        # Get the action from the low-level model
         action, states[i] = low_level_models[i].predict(
             obs[i], state=states[i], episode_start=episode_starts[i], deterministic=True
         )
         actions.append(action)
         episode_starts[i] = False  # Reset episode_starts after the first step
 
-    combined_actions = [actions[i][0] for i in range(2)]
+    combined_actions = [actions[i][0] for i in range(num_agents)]
+
+    # Update fuel and tire levels for each car
+    for i in range(num_agents):
+        fuel_levels[i] -= fuel_consumption_rate * (1.0 / FPS)
+        fuel_levels[i] = max(fuel_levels[i], 0.0)
+        tire_tread_levels[i] -= tire_wear_rate * (1.0 / FPS)
+        tire_tread_levels[i] = max(tire_tread_levels[i], 0.0)
+        if step_counter % 100 == 0:
+            print(
+                f"Car {i}: Fuel={fuel_levels[i]:.4f}, Tires={tire_tread_levels[i]:.4f}"
+            )
+
+    # Use the higher-level RL agent to decide whether to pit
+    for i in range(num_agents):
+        pit_obs = np.array([fuel_levels[i], tire_tread_levels[i]], dtype=np.float32)
+        pit_obs = pit_obs.reshape(1, -1)  # Add batch dimension
+        pit_action, _ = pit_model.predict(pit_obs)
+        # For now, just print the decision
+        if pit_action == 1:
+            print(f"Car {i} should pit according to the RL agent.")
+        else:
+            print(f"Car {i} should continue driving according to the RL agent.")
+
+    # Step the environment
     obs_raw, rewards_raw, done, _ = multi_env.step(combined_actions)
     multi_env.render()
     time.sleep(0.05)
 
-    for i in range(2):
+    for i in range(num_agents):
         obs[i], _, _, _ = agent_envs[i].step(actions[i])
         total_rewards[i] += rewards_raw[i]
 

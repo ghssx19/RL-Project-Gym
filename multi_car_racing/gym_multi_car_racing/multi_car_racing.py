@@ -588,7 +588,7 @@ class MultiCarRacing(gym.Env, EzPickle):
                     )
 
         # Add logging to monitor progress every 100 steps
-        if int(self.t * FPS) % 1 == 0:  # Every 100 steps
+        if int(self.t * FPS) % 100 == 0:  # Every 100 steps
             for car_id in range(self.num_agents):
                 print(
                     f"Time: {self.t:.2f}s - Car {car_id} has visited {self.tile_visited_count[car_id]} out of {len(self.track)} tiles."
