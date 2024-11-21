@@ -267,12 +267,12 @@ while not done:
         pit_obs = np.array([fuel_levels[i], tire_tread_levels[i]], dtype=np.float32)
         pit_obs = pit_obs.reshape(1, -1)  # Add batch dimension
         pit_action, _ = pit_model.predict(pit_obs)
-        # For now, just print the decision
-        if step_counter % 100 == 0:
-            if pit_action == 1:
-                print(f"Car {i} should pit according to the RL agent.")
-            else:
-                print(f"Car {i} should continue driving according to the RL agent.")
+
+        # Handle the pit stop decision
+        if pit_action == 1:  # Pit stop
+            print(f"Car {i} is pitting. Resetting fuel and tires.")
+            fuel_levels[i] = 1.0  # Reset fuel to full
+            tire_tread_levels[i] = 1.0  # Reset tires to full
 
     # Step the environment
     obs_raw, rewards_raw, done, _ = multi_env.step(combined_actions)
@@ -288,11 +288,12 @@ while not done:
             obs[i] = agent_envs[i].reset()
             episode_starts[i] = True  # Reset episode start for the agent
             states[i] = None  # Reset the model's internal state
-            # Optionally reset fuel and tire levels for the agent
+            # Reset fuel and tire levels for the agent
             fuel_levels[i] = 1.0
             tire_tread_levels[i] = 1.0
 
     # Increment step counter
     step_counter += 1
+
 
 print("Individual scores for each car:", total_rewards)
