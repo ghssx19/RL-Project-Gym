@@ -189,11 +189,11 @@ class PitStopDecisionEnv(gym.Env):
         reward = 0.0
         if action == 0:  # Continue driving
             if self.fuel_level > 0.1 and self.tire_tread_level > 0.1:
-                reward += 1.0  # Positive reward for safe driving
+                reward += 20.0  # Positive reward for safe driving
             else:
                 reward -= 10.0  # Negative reward for risking running out
         elif action == 1:  # Pit stop
-            reward -= 5.0  # Negative reward for pitting (cost)
+            reward -= 50.0  # Negative reward for pitting (cost)
             self.fuel_level = 1.0
             self.tire_tread_level = 1.0
 
