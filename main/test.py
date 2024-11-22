@@ -6,8 +6,6 @@ import cv2
 from multi_car_racing.gym_multi_car_racing import MultiCarRacing
 from gym.wrappers import TimeLimit, ResizeObservation, GrayScaleObservation, FrameStack
 import gym
-import gym_multi_car_racing
-from gym_multi_car_racing import MultiCarRacing
 
 from gym.wrappers import TimeLimit
 from sb3_contrib import RecurrentPPO
@@ -159,3 +157,79 @@ episode_starts = [True for _ in range(num_agents)]
 total_rewards = [0 for _ in range(num_agents)]
 done = False
 step_counter = 0
+
+# Initialize variables for fuel and tire levels
+num_agents = 2
+fuel_levels = [1.0 for _ in range(num_agents)]  # Start with full fuel tanks
+tire_tread_levels = [1.0 for _ in range(num_agents)]  # Start with new tires
+
+# Define consumption rates
+fuel_consumption_rate = 0.09  # Adjust as needed
+tire_wear_rate = 0.09  # Adjust as needed
+
+FPS = 50  # Frames per second
+
+while not done:
+    actions = []
+    for i in range(num_agents):
+        # Get the action from the low-level model
+        action, states[i] = low_level_models[i].predict(
+            obs[i], state=states[i], episode_start=episode_starts[i], deterministic=True
+        )
+        actions.append(action)
+        episode_starts[i] = False  # Reset episode_starts after the first step
+
+    combined_actions = [actions[i][0] for i in range(num_agents)]
+
+    # Update fuel and tire levels for each car
+    for i in range(num_agents):
+        fuel_levels[i] -= fuel_consumption_rate * (1.0 / FPS)
+        fuel_levels[i] = max(fuel_levels[i], 0.0)
+        tire_tread_levels[i] -= tire_wear_rate * (1.0 / FPS)
+        tire_tread_levels[i] = max(tire_tread_levels[i], 0.0)
+        if step_counter % 100 == 0:
+            print(
+                f"Car {i}: Fuel={fuel_levels[i]:.4f}, Tires={tire_tread_levels[i]:.4f}"
+            )
+
+    # Use the higher-level RL agent to decide whether to pit
+    for i in range(num_agents):
+        pit_obs = np.array([fuel_levels[i], tire_tread_levels[i]], dtype=np.float32)
+        pit_obs = pit_obs.reshape(1, -1)  # Add batch dimension
+        pit_action, _ = pit_model.predict(pit_obs)
+
+        # Print the decision
+        if step_counter % 100 == 0:
+            if pit_action == 1:  # Pit stop
+                print(f"Car {i} should pit according to the RL agent.")
+                print(
+                    f"Car {i} is pitting! Fuel level: {fuel_levels[i]:.4f}, Tire tread level: {tire_tread_levels[i]:.4f}"
+                )
+                # Reset fuel and tires when pitting
+                fuel_levels[i] = 1.0
+                tire_tread_levels[i] = 1.0
+            else:
+                print(f"Car {i} should continue driving according to the RL agent.")
+
+    # Step the environment
+    obs_raw, rewards_raw, done, _ = multi_env.step(combined_actions)
+    multi_env.render()
+    time.sleep(0.05)
+
+    for i in range(num_agents):
+        obs[i], agent_reward, agent_done, _ = agent_envs[i].step(actions[i])
+        total_rewards[i] += agent_reward
+
+        if agent_done:
+            print(f"Agent {i} is done. Resetting agent.")
+            obs[i] = agent_envs[i].reset()
+            episode_starts[i] = True  # Reset episode start for the agent
+            states[i] = None  # Reset the model's internal state
+            # Optionally reset fuel and tire levels for the agent
+            fuel_levels[i] = 1.0
+            tire_tread_levels[i] = 1.0
+
+    # Increment step counter
+    step_counter += 1
+
+print("Individual scores for each car:", total_rewards)
