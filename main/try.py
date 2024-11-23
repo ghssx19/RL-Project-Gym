@@ -34,21 +34,73 @@ class SimplePitStopEnv(Env):
         tire_wear_rate = 0.05
 
         reward = 0
+        if action == 0:  # Keep driving
+            self.fuel_level = max(0.0, self.fuel_level - fuel_consumption_rate)
+            self.tire_wear = max(0.0, self.tire_wear - tire_wear_rate)
+            reward += 50  # Reward for safe driving
+
+            if self.fuel_level <= 0.1 or self.tire_wear <= 0.1:
+                reward -= 1000.0  # Heavy penalty for critical levels
+                self.done = True  # End episode
+
+        elif action == 1:  # Pit stop
+            reward -= 1.0  # Penalty for taking a pit stop
+            if self.fuel_level > 0.5 and self.tire_wear > 0.5:
+                reward -= 40.0  # Penalty for unnecessary pit stop
+            elif self.fuel_level <= 0.1 or self.tire_wear <= 0.1:
+                reward += 200.0
+            else:
+                reward += 50.0  # Reward for a timely pit stop
+
+            self.fuel_level = 1.0
+            self.tire_wear = 1.0
+
+        self.step_count += 1
+        if self.step_count >= 1000:
+            self.done = True
+
+        observation = np.array([self.fuel_level, self.tire_wear], dtype=np.float32)
+
+        n = 1
+
+        if self.step_count % n == 0:
+            print(
+                f"Step: {self.step_count}, "
+                f"Fuel Level: {self.fuel_level:.2f}, "
+                f"Tire Wear: {self.tire_wear:.2f}, "
+                f"Action Taken: {'Pit Stop' if action == 1 else 'Keep Driving'}, "
+                f"Reward: {reward:.2f}"
+            )
+
+        return observation, reward, self.done, {}
+
+    def render(self, mode="human"):
+        print(f"Fuel Level: {self.fuel_level:.2f}, Tire Wear: {self.tire_wear:.2f}")
+
+
+"""
+    def step(self, action):
+        fuel_consumption_rate = 0.05
+        tire_wear_rate = 0.05
+
+        reward = 0
         if self.last_action == 1 and action == 1:
             reward -= 40  # Penalty for consecutive pit stops
 
         if action == 0 and self.fuel_level > 0.2 and self.tire_wear > 0.2:
-            reward += 100  # Encourage safe driving
+            reward += 50  # Encourage safe driving
 
         if action == 0:
             self.fuel_level -= fuel_consumption_rate
             self.tire_wear -= tire_wear_rate
             reward += 50
             if self.fuel_level <= 0.1 or self.tire_wear <= 0.1:
-                reward -= 10.0
+                reward -= 1000.0  #! this should probably be higher
+            # elif self.fuel_level == 0 or self.tire_wear == 0:
+            #     reward = -10000
 
         elif action == 1:
-            reward -= 10.0
+            reward -= 10.0  #! maybe remove this
             if self.fuel_level > 0.5 and self.tire_wear > 0.5:
                 reward -= 40.0
             elif self.fuel_level <= 0.1 or self.tire_wear <= 0.1:
@@ -63,10 +115,20 @@ class SimplePitStopEnv(Env):
 
         self.last_action = action
         observation = np.array([self.fuel_level, self.tire_wear], dtype=np.float32)
-        return observation, reward, self.done, {}
 
-    def render(self, mode="human"):
-        print(f"Fuel Level: {self.fuel_level:.2f}, Tire Wear: {self.tire_wear:.2f}")
+        n = 1
+
+        if self.step_count % n == 0:
+            print(
+                f"Step: {self.step_count}, "
+                f"Fuel Level: {self.fuel_level:.2f}, "
+                f"Tire Wear: {self.tire_wear:.2f}, "
+                f"Action Taken: {'Pit Stop' if action == 1 else 'Keep Driving'}, "
+                f"Reward: {reward:.2f}"
+            )
+
+        return observation, reward, self.done, {}
+"""
 
 
 # Custom callback to track rewards
@@ -110,10 +172,10 @@ policy_kwargs = dict(
 model = PPO(
     policy="MlpPolicy",
     env=env,
-    learning_rate=1e-4,
+    learning_rate=7e-5,
     n_steps=2048,
     batch_size=64,
-    n_epochs=10,
+    n_epochs=40,
     gamma=0.99,
     gae_lambda=0.95,
     clip_range=0.2,
@@ -131,7 +193,7 @@ reward_tracker = RewardTrackerCallback()
 model.learn(total_timesteps=500_000, callback=reward_tracker)
 
 # Save the trained model
-model.save("simple_pitstop_model")
+model.save("bettersimplemodel")
 
 # Plot the training rewards
 reward_tracker.plot_rewards()
@@ -141,6 +203,7 @@ test_episodes = 10
 test_rewards = []
 for episode in range(test_episodes):
     obs = env.reset()
+    print(f"[TEST START] Episode {episode + 1}, Initial Obs: {obs}")
     total_reward = 0
     done = False
     while not done:
