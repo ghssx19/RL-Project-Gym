@@ -923,6 +923,7 @@ if __name__ == "__main__":
             stopped = True  # Terminate on esc.
         if k == 0xFF0D:
             restart = True  # Restart on Enter.
+        # if k == key.P:
 
         # Iterate through cars and assign them control keys (mod num controllers)
         for i in range(min(len(CAR_CONTROL_KEYS), NUM_CARS)):

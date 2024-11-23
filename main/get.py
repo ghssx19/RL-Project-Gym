@@ -12,7 +12,14 @@ import warnings
 import os
 import traceback  # For detailed exception tracebacks
 import random
+from datetime import datetime
 
+random.seed(time.time_ns())
+fuel_consumption_rate = random.uniform(0.009, 0.2)  # Adjust as needed
+print(f"the fuel consumption rate is{fuel_consumption_rate}")
+# (0.09)  # Adjust as needed
+tire_wear_rate = random.uniform(0.009, 0.2)
+print(f"the tire wear level is{tire_wear_rate}")  # Adjust as needed
 # 1. Monkey-patch gym.spaces.Box to add 'shape' attribute if missing
 if not hasattr(gym.spaces.Box, "shape"):
 
@@ -164,15 +171,13 @@ tire_tread_level = 1.0  # Start with new tires
 
 # Define consumption rates
 
-fuel_consumption_rate = random.uniform(0.009, 0.15)  # Adjust as needed
 print(f"the fuel consumption rate is{fuel_consumption_rate}")
 # (0.09)  # Adjust as needed
-tire_wear_rate = random.uniform(0.009, 0.15)
 print(f"the tire wear level is{tire_wear_rate}")  # Adjust as needed
-
 FPS = 50  # Frames per second
-
+start_time = datetime.now()
 while not done:
+
     try:
         # Get the action from the low-level model
         action, states = low_level_model.predict(
@@ -195,32 +200,68 @@ while not done:
             print(
                 f"Car 0: Fuel={fuel_level:.4f}, Tires={tire_tread_level:.4f}, Model action {action_high_level}"
             )
+        #! if here
+        if action_high_level == 1:
+            print(
+                f"Pitting: Car 0: Fuel={fuel_level:.4f}, Tires={tire_tread_level:.4f}, Model action {action_high_level}"
+            )
+            # Take a step in the environment with the chosen action
+            obs_raw, rewards_raw, done, _ = multi_env.step([action])
+            # Render the environment without passing 'mode'
+            multi_env.render()
+            time.sleep(0.05)  # Control simulation speed
 
-        # Take a step in the environment with the chosen action
-        obs_raw, rewards_raw, done, _ = multi_env.step([action])
-        # Render the environment without passing 'mode'
-        multi_env.render()
-        time.sleep(0.05)  # Control simulation speed
+            # Step the agent environment with the chosen action
+            obs, agent_reward, agent_done, _ = agent_env.step([action])
+            total_rewards += agent_reward
 
-        # Step the agent environment with the chosen action
-        obs, agent_reward, agent_done, _ = agent_env.step([action])
-        total_rewards += agent_reward
+            # if agent_done:
+            #     print(f"Agent 0 is done. Resetting agent.")
+            #     obs = agent_env.reset()
+            #     episode_start = True  # Reset episode start for the agent
+            #     states = None  # Reset the model's internal state
+            #     # Optionally reset fuel and tire levels for the agent
+            #     fuel_level = 1.0
+            #     tire_tread_level = 1.0
 
-        if agent_done:
-            print(f"Agent 0 is done. Resetting agent.")
-            obs = agent_env.reset()
-            episode_start = True  # Reset episode start for the agent
-            states = None  # Reset the model's internal state
-            # Optionally reset fuel and tire levels for the agent
-            fuel_level = 1.0
-            tire_tread_level = 1.0
+            # Increment step counter
+            fuel_level = 1.0  # Start with full fuel tank
+            tire_tread_level = 1.0  # Start with new tires
+            step_counter += 1
+            pit_stop_time = 5
 
-        # Increment step counter
-        step_counter += 1
+        #! else here
+        else:
+            # Take a step in the environment with the chosen action
+            obs_raw, rewards_raw, done, _ = multi_env.step([action])
+            # Render the environment without passing 'mode'
+            multi_env.render()
+            time.sleep(0.05)  # Control simulation speed
 
+            # Step the agent environment with the chosen action
+            obs, agent_reward, agent_done, _ = agent_env.step([action])
+            total_rewards += agent_reward
+
+            if agent_done:
+                print(f"Agent 0 is done. Resetting agent.")
+                obs = agent_env.reset()
+                episode_start = True  # Reset episode start for the agent
+                states = None  # Reset the model's internal state
+                # Optionally reset fuel and tire levels for the agent
+                fuel_level = 1.0
+                tire_tread_level = 1.0
+                print(f"the lapt time is {timer}")
+
+            # Increment step counter
+
+            step_counter += 1
+            pit_stop_time = 0
+        current_time = datetime.now()
+        timer = (current_time - start_time).total_seconds() + pit_stop_time
     except Exception as e:
         print(f"An error occurred during simulation: {e}")
         traceback.print_exc()  # Print full traceback for debugging
         break
+
 
 print("Individual scores for the car:", total_rewards)
