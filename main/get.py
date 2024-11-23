@@ -28,7 +28,9 @@ if not hasattr(gym.spaces.Box, "shape"):
 
 # 2. Load the saved high-level model
 print("Loading the saved high-level model...")
-pit_model_path = "/home/souren/Documents/RL-Project-Gym/main/models/base_model.zip"
+pit_model_path = (
+    "/home/souren/Documents/RL-Project-Gym/multi_car_racing/bettersimplemodel.zip"
+)
 if not os.path.exists(pit_model_path):
     raise FileNotFoundError(f"High-level model not found at {pit_model_path}")
 pit_model = PPO.load(pit_model_path)
@@ -189,7 +191,7 @@ while not done:
         action_high_level, _ = pit_model.predict(
             high_level_obersevation, deterministic=True
         )
-        if step_counter % 50 == 0:
+        if step_counter % 10 == 0:
             print(
                 f"Car 0: Fuel={fuel_level:.4f}, Tires={tire_tread_level:.4f}, Model action {action_high_level}"
             )
