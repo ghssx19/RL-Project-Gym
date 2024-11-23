@@ -907,7 +907,7 @@ class MultiCarRacing(gym.Env, EzPickle):
 if __name__ == "__main__":
     from pyglet.window import key
 
-    NUM_CARS = 2  # Supports key control of two cars, but can simulate as many as needed
+    NUM_CARS = 1  # Supports key control of two cars, but can simulate as many as needed
 
     # Specify key controls for cars
     CAR_CONTROL_KEYS = [

@@ -27,9 +27,7 @@ if not hasattr(gym.spaces.Box, "shape"):
 
 # Load the saved high-level model
 print("Loading the saved high-level model...")
-pit_model = PPO.load(
-    "/home/souren/Documents/RL-Project-Gym/main/models/pit_stop_rl_agent.zip"
-)
+pit_model = PPO.load("pit_stop_rl_agent")
 print("High-level model loaded successfully!")
 
 # Load the low-level model
@@ -39,8 +37,9 @@ print("High-level model loaded successfully!")
 # ]
 low_level_model_paths = [
     "/home/souren/Documents/RL-Project-Gym/rl-baselines3-zoo/logs/ppo_lstm/CarRacing-v0_1/CarRacing-v0.zip",
-    "/home/souren/Documents/RL-Project-Gym/rl-baselines3-zoo/logs/ppo_lstm/CarRacing-v0_1/CarRacing-v0.zip",
+    "/home/souren/Documents/RL-Project-Gym/rl-baselines3-zoo/logs/ppo_lstm/CarRacing-v0_1/CarRacing-v1.zip",
 ]
+
 low_level_models = []
 for i, path in enumerate(low_level_model_paths):
     with warnings.catch_warnings():
@@ -69,7 +68,6 @@ class SingleAgentWrapper(gym.Wrapper):
             action if i == self.agent_id else [0, 0, 0]
             for i in range(self.env.num_agents)
         ]
-        # print(f"actions print {action}")
         obs, rewards, done, info = self.env.step(actions)
         # Since 'done' can be a bool or list, ensure it's handled correctly
         if isinstance(done, bool):
@@ -170,7 +168,7 @@ fuel_consumption_rate = 0.09  # Adjust as needed
 tire_wear_rate = 0.09  # Adjust as needed
 
 FPS = 50  # Frames per second
-step_counter = 0
+
 while not done:
     actions = []
     for i in range(num_agents):
@@ -182,73 +180,54 @@ while not done:
         episode_starts[i] = False  # Reset episode_starts after the first step
 
     combined_actions = [actions[i][0] for i in range(num_agents)]
-    # print("before fuel levels")
+
+    # Update fuel and tire levels for each car
     for i in range(num_agents):
         fuel_levels[i] -= fuel_consumption_rate * (1.0 / FPS)
         fuel_levels[i] = max(fuel_levels[i], 0.0)
         tire_tread_levels[i] -= tire_wear_rate * (1.0 / FPS)
         tire_tread_levels[i] = max(tire_tread_levels[i], 0.0)
-        if step_counter % 10 == 0:
+        if step_counter % 100 == 0:
             print(
                 f"Car {i}: Fuel={fuel_levels[i]:.4f}, Tires={tire_tread_levels[i]:.4f}"
             )
-    # print("after fuel levels")
 
     # Use the higher-level RL agent to decide whether to pit
     for i in range(num_agents):
         pit_obs = np.array([fuel_levels[i], tire_tread_levels[i]], dtype=np.float32)
         pit_obs = pit_obs.reshape(1, -1)  # Add batch dimension
         pit_action, _ = pit_model.predict(pit_obs)
-        print(f"Car {i} pit action: {pit_action}")
-        if pit_action == 1:  # Pit stop
-            print(f"Car {i} is pitting!")
-            print(f"car {i} fuel level: {fuel_levels[i]}")
-            if i == 0:
-                d = i + 1
-            else:
-                d = i - 1
-            for q in range(5):
-                combined_actions[i] = [0, 0, 0]
-                action_pit = [[0, 0, 0]]
-                obs_raw, rewards_raw, done, _ = multi_env.step(combined_actions)
-                multi_env.render()
-                time.sleep(0.05)
-                obs[i], agent_reward, agent_done, _ = agent_envs[i].step(action_pit)
-                obs[d], agent_reward, agent_done, _ = agent_envs[d].step(actions[d])
 
-                total_rewards[i] += agent_reward
-                total_rewards[d] += agent_reward
-
+        # Print the decision
+        if step_counter % 100 == 0:
+            if pit_action == 1:  # Pit stop
+                print(f"Car {i} should pit according to the RL agent.")
+                print(
+                    f"Car {i} is pitting! Fuel level: {fuel_levels[i]:.4f}, Tire tread level: {tire_tread_levels[i]:.4f}"
+                )
                 # Reset fuel and tires when pitting
-            d = 0
-            fuel_levels[i] = 1.0
-            tire_tread_levels[i] = 1.0
-
-            if agent_done:
-                print(f"Agent {i} is done. Resetting agent.")
-                obs[i] = agent_envs[i].reset()
-                episode_starts[i] = True  # Reset episode start for the agent
-                states[i] = None  # Reset the model's internal state
-                # Optionally reset fuel and tire levels for the agent
                 fuel_levels[i] = 1.0
                 tire_tread_levels[i] = 1.0
+            else:
+                print(f"Car {i} should continue driving according to the RL agent.")
 
-        else:
-            obs_raw, rewards_raw, done, _ = multi_env.step(combined_actions)
-            multi_env.render()
-            time.sleep(0.05)
-            for i in range(num_agents):
-                obs[i], agent_reward, agent_done, _ = agent_envs[i].step(actions[i])
-                total_rewards[i] += agent_reward
+    # Step the environment
+    obs_raw, rewards_raw, done, _ = multi_env.step(combined_actions)
+    multi_env.render()
+    time.sleep(0.05)
 
-                if agent_done:
-                    print(f"Agent {i} is done. Resetting agent.")
-                    obs[i] = agent_envs[i].reset()
-                    episode_starts[i] = True  # Reset episode start for the agent
-                    states[i] = None  # Reset the model's internal state
-                    # Optionally reset fuel and tire levels for the agent
-                    fuel_levels[i] = 1.0
-                    tire_tread_levels[i] = 1.0
+    for i in range(num_agents):
+        obs[i], agent_reward, agent_done, _ = agent_envs[i].step(actions[i])
+        total_rewards[i] += agent_reward
+
+        if agent_done:
+            print(f"Agent {i} is done. Resetting agent.")
+            obs[i] = agent_envs[i].reset()
+            episode_starts[i] = True  # Reset episode start for the agent
+            states[i] = None  # Reset the model's internal state
+            # Optionally reset fuel and tire levels for the agent
+            fuel_levels[i] = 1.0
+            tire_tread_levels[i] = 1.0
 
     # Increment step counter
     step_counter += 1

@@ -151,7 +151,9 @@ multi_env = MultiCarRacing(
 
 
 # Load the trained higher-level RL agent
-pit_model = PPO.load("pit_stop_rl_agent")
+pit_model = PPO.load(
+    "/home/souren/Documents/RL-Project-Gym/multi_car_racing/pitnew.zip"
+)
 
 num_agents = 2
 
@@ -217,7 +219,7 @@ while not done:
 
         # Print the decision
         if step_counter % 100 == 0:
-            print(f"Car {i} action is: action={combined_actions[i] }")
+            # print(f"Car {i} action is: action={combined_actions[i] }")
             if pit_action == 1:  # Pit stop
                 # print(f"Car {i} should pit according to the RL agent.")
                 print(
@@ -225,7 +227,7 @@ while not done:
                 )
                 for q in range(10):
                     combined_actions[i] = [0, 0, 0]
-                    print(f"Car {i} action is: action={combined_actions[i]}")
+                    # print(f"Car {i} action is: action={combined_actions[i]}")
                     obs_raw, rewards_raw, done, _ = multi_env.step(combined_actions)
                     for i in range(num_agents):
                         obs[i], agent_reward, agent_done, _ = agent_envs[i].step(
@@ -246,7 +248,7 @@ while not done:
 
     for i in range(num_agents):
         obs[i], agent_reward, agent_done, _ = agent_envs[i].step(actions[i])
-        print("Agent action is: ", actions[i])
+        # print("Agent action is: ", actions[i])
         total_rewards[i] += agent_reward
 
         if agent_done:
