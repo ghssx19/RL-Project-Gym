@@ -1,5 +1,6 @@
 import numpy as np
 from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import BaseCallback
 from gym import Env, spaces
 import matplotlib.pyplot as plt
 import os
@@ -18,7 +19,6 @@ class SimplePitStopEnv(Env):
         )
         # Action space: 0 = keep driving, 1 = pit stop
         self.action_space = spaces.Discrete(2)
-        # Initialize state variables
         self.reset()
 
     def reset(self):
@@ -30,49 +30,69 @@ class SimplePitStopEnv(Env):
         return np.array([self.fuel_level, self.tire_wear], dtype=np.float32)
 
     def step(self, action):
-        # Simulate fuel consumption and tire wear per step
         fuel_consumption_rate = 0.05
         tire_wear_rate = 0.05
 
         reward = 0
-
-        # Penalize consecutive pit stops
         if self.last_action == 1 and action == 1:
             reward -= 40  # Penalty for consecutive pit stops
 
         if action == 0 and self.fuel_level > 0.2 and self.tire_wear > 0.2:
             reward += 100  # Encourage safe driving
 
-        if action == 0:  # Continue driving
+        if action == 0:
             self.fuel_level -= fuel_consumption_rate
             self.tire_wear -= tire_wear_rate
-            reward += 50  # Reward for driving safely
+            reward += 50
             if self.fuel_level <= 0.1 or self.tire_wear <= 0.1:
-                reward -= 10.0  # Penalty for risky driving
+                reward -= 10.0
 
-        elif action == 1:  # Pit stop
-            reward -= 10.0  # Penalty for taking a pit stop
+        elif action == 1:
+            reward -= 10.0
             if self.fuel_level > 0.5 and self.tire_wear > 0.5:
-                reward -= 40.0  # Additional penalty for unnecessary pit stops
+                reward -= 40.0
             elif self.fuel_level <= 0.1 or self.tire_wear <= 0.1:
-                reward += 100.0  # Reward for necessary pit stops
+                reward += 100.0
 
-            self.fuel_level = 1.0  # Refuel
-            self.tire_wear = 1.0  # Replace tires
+            self.fuel_level = 1.0
+            self.tire_wear = 1.0
 
         self.step_count += 1
-        if self.step_count >= 1000:  # End the episode after 1000 steps
+        if self.step_count >= 1000:
             self.done = True
 
-        # Update last action
         self.last_action = action
-
-        # Observation is the new state
         observation = np.array([self.fuel_level, self.tire_wear], dtype=np.float32)
         return observation, reward, self.done, {}
 
     def render(self, mode="human"):
         print(f"Fuel Level: {self.fuel_level:.2f}, Tire Wear: {self.tire_wear:.2f}")
+
+
+# Custom callback to track rewards
+class RewardTrackerCallback(BaseCallback):
+    def __init__(self, verbose=0):
+        super(RewardTrackerCallback, self).__init__(verbose)
+        self.episode_rewards = []
+
+    def _on_step(self) -> bool:
+        if (
+            "episode" in self.locals.get("infos", [{}])[0]
+        ):  # Check if info contains episode data
+            for info in self.locals["infos"]:
+                if "episode" in info:
+                    self.episode_rewards.append(info["episode"]["r"])
+        return True
+
+    def plot_rewards(self):
+        plt.figure(figsize=(12, 6))
+        plt.plot(self.episode_rewards, label="Episode Rewards")
+        plt.xlabel("Episode")
+        plt.ylabel("Total Reward")
+        plt.title("Training Rewards Over Time")
+        plt.legend()
+        plt.grid()
+        plt.show()
 
 
 # Create the environment
@@ -86,7 +106,7 @@ policy_kwargs = dict(
     activation_fn=nn.ReLU,
 )
 
-# Train the PPO model
+# Instantiate the model
 model = PPO(
     policy="MlpPolicy",
     env=env,
@@ -104,11 +124,17 @@ model = PPO(
     verbose=1,
 )
 
-# Train the model
-model.learn(total_timesteps=500_000)
+# Instantiate the callback
+reward_tracker = RewardTrackerCallback()
+
+# Train the model with the callback
+model.learn(total_timesteps=500_000, callback=reward_tracker)
 
 # Save the trained model
 model.save("simple_pitstop_model")
+
+# Plot the training rewards
+reward_tracker.plot_rewards()
 
 # Evaluation: Test the model
 test_episodes = 10
