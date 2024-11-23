@@ -11,6 +11,7 @@ import time
 import warnings
 import os
 import traceback  # For detailed exception tracebacks
+import random
 
 # 1. Monkey-patch gym.spaces.Box to add 'shape' attribute if missing
 if not hasattr(gym.spaces.Box, "shape"):
@@ -31,7 +32,7 @@ pit_model_path = "/home/souren/Documents/RL-Project-Gym/main/models/base_model.z
 if not os.path.exists(pit_model_path):
     raise FileNotFoundError(f"High-level model not found at {pit_model_path}")
 pit_model = PPO.load(pit_model_path)
-# print("High-level model loaded successfully!")
+print("High-level model loaded successfully!")
 
 # 3. Load the low-level model
 low_level_model_path = "/home/souren/Documents/RL-Project-Gym/rl-baselines3-zoo/logs/ppo_lstm/CarRacing-v0_1/CarRacing-v0.zip"
@@ -160,8 +161,12 @@ fuel_level = 1.0  # Start with full fuel tank
 tire_tread_level = 1.0  # Start with new tires
 
 # Define consumption rates
-fuel_consumption_rate = 0.09  # Adjust as needed
-tire_wear_rate = 0.09  # Adjust as needed
+
+fuel_consumption_rate = random.uniform(0.009, 0.15)  # Adjust as needed
+print(f"the fuel consumption rate is{fuel_consumption_rate}")
+# (0.09)  # Adjust as needed
+tire_wear_rate = random.uniform(0.009, 0.15)
+print(f"the tire wear level is{tire_wear_rate}")  # Adjust as needed
 
 FPS = 50  # Frames per second
 
@@ -178,9 +183,16 @@ while not done:
         fuel_level = max(fuel_level, 0.0)
         tire_tread_level -= tire_wear_rate * (1.0 / FPS)
         tire_tread_level = max(tire_tread_level, 0.0)
-
+        high_level_obersevation = np.array(
+            [fuel_level, tire_tread_level], dtype=np.float32
+        )
+        action_high_level, _ = pit_model.predict(
+            high_level_obersevation, deterministic=True
+        )
         if step_counter % 50 == 0:
-            print(f"Car 0: Fuel={fuel_level:.4f}, Tires={tire_tread_level:.4f}")
+            print(
+                f"Car 0: Fuel={fuel_level:.4f}, Tires={tire_tread_level:.4f}, Model action {action_high_level}"
+            )
 
         # Take a step in the environment with the chosen action
         obs_raw, rewards_raw, done, _ = multi_env.step([action])
