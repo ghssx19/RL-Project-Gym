@@ -47,8 +47,8 @@ from shapely.geometry import Point, Polygon
 #
 # Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
-STATE_W = 96  # less than Atari 160x192
-STATE_H = 96
+STATE_W = 64  # less than Atari 160x192
+STATE_H = 64
 VIDEO_W = 600
 VIDEO_H = 400
 WINDOW_W = 1000

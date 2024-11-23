@@ -1,0 +1,212 @@
+import gym
+import gym_multi_car_racing
+from gym_multi_car_racing import MultiCarRacing
+
+from gym.wrappers import TimeLimit, ResizeObservation, GrayScaleObservation, FrameStack
+from sb3_contrib import RecurrentPPO
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv
+import numpy as np
+import time
+import warnings
+import os
+import traceback  # For detailed exception tracebacks
+
+# 1. Monkey-patch gym.spaces.Box to add 'shape' attribute if missing
+if not hasattr(gym.spaces.Box, "shape"):
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @shape.setter
+    def shape(self, value):
+        self._shape = value
+
+    gym.spaces.Box.shape = shape
+
+# 2. Load the saved high-level model
+print("Loading the saved high-level model...")
+pit_model_path = "/home/souren/Documents/RL-Project-Gym/main/models/base_model.zip"
+if not os.path.exists(pit_model_path):
+    raise FileNotFoundError(f"High-level model not found at {pit_model_path}")
+pit_model = PPO.load(pit_model_path)
+# print("High-level model loaded successfully!")
+
+# 3. Load the low-level model
+low_level_model_path = "/home/souren/Documents/RL-Project-Gym/rl-baselines3-zoo/logs/ppo_lstm/CarRacing-v0_1/CarRacing-v0.zip"
+
+if not os.path.exists(low_level_model_path):
+    raise FileNotFoundError(f"Low-level model not found at {low_level_model_path}")
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    low_level_model = RecurrentPPO.load(
+        low_level_model_path,
+        custom_objects={
+            "learning_rate": 0.0,
+            "clip_range": 0.2,
+            "lr_schedule": lambda _: 0.0,  # Replace lr_schedule with a constant
+        },
+    )
+print("Low-level model loaded successfully!")
+
+
+# 4. Custom wrapper to extract and preprocess single-agent observations
+class SingleAgentWrapper(gym.Wrapper):
+    def __init__(self, env):
+        super(SingleAgentWrapper, self).__init__(env)
+        self.action_space = env.action_space
+
+    def reset(self):
+        obs = self.env.reset()
+        # print(f"SingleAgentWrapper.reset() observation shape: {obs.shape}")  # Debug
+        return obs[0]
+
+    def step(self, action):
+        # Apply the action to the single agent
+        actions = [action]  # Since num_agents=1
+        obs, rewards, done, info = self.env.step(actions)
+        # Handle 'done' correctly
+        if isinstance(done, bool):
+            agent_done = done
+        else:
+            agent_done = done[0]
+        # print(f"SingleAgentWrapper.step() observation shape: {obs.shape}")  # Debug
+        return obs[0], rewards[0], agent_done, info
+
+    def render(self, mode="human", **kwargs):
+        """
+        Render the environment. Passes the 'mode' argument to the underlying environment's render method.
+        """
+        return self.env.render(mode=mode, **kwargs)
+
+
+# Wrapper to transpose observations to channels-first format
+class TransposeImage(gym.ObservationWrapper):
+    def __init__(self, env):
+        super(TransposeImage, self).__init__(env)
+        obs_shape = self.observation_space.shape
+        # print(f"TransposeImage: original observation shape: {obs_shape}")  # Debug
+        if len(obs_shape) == 3:
+            # For shape (H, W, C)
+            self.observation_space = gym.spaces.Box(
+                low=0,
+                high=255,
+                shape=(obs_shape[2], obs_shape[0], obs_shape[1]),
+                dtype=np.uint8,
+            )
+        elif len(obs_shape) == 4:
+            # For shape (N, H, W, C)
+            num_frames = obs_shape[0]
+            self.observation_space = gym.spaces.Box(
+                low=0,
+                high=255,
+                shape=(num_frames, obs_shape[1], obs_shape[2]),
+                dtype=np.uint8,
+            )
+        else:
+            raise ValueError(f"Unexpected observation space shape: {obs_shape}")
+
+    def observation(self, observation):
+        observation = np.array(observation)
+        if observation.ndim == 4:
+            # Observation shape is (N, H, W, C)
+            observation = np.squeeze(observation, axis=3)
+            # Now shape is (N, H, W)
+        elif observation.ndim == 3:
+            # Observation shape is (H, W, C)
+            observation = observation.transpose(2, 0, 1)
+        else:
+            raise ValueError(f"Unexpected observation shape: {observation.shape}")
+        # print(f"After Transpose: {observation.shape}")  # Debug
+        return observation
+
+
+# 5. Initialize the single-agent environment
+multi_env = MultiCarRacing(
+    num_agents=1,  # Single agent
+    direction="CCW",
+    use_random_direction=True,
+    backwards_flag=True,
+    h_ratio=0.25,
+    use_ego_color=False,
+    # render_mode="human"  # Removed to prevent TypeError
+)
+
+# Wrap the environment with TimeLimit to set the maximum episode steps
+max_steps_per_episode = 2000  # Adjust as needed
+multi_env = TimeLimit(multi_env, max_episode_steps=max_steps_per_episode)
+
+# Create the single-agent environment with preprocessing
+agent_env = SingleAgentWrapper(multi_env)
+agent_env = ResizeObservation(agent_env, shape=(64, 64))  # Pass shape as tuple
+agent_env = GrayScaleObservation(agent_env, keep_dim=True)
+agent_env = FrameStack(agent_env, num_stack=2)
+agent_env = TransposeImage(agent_env)
+agent_env = DummyVecEnv([lambda: agent_env])  # Vectorize the environment
+
+# 6. Run the simulation
+print("Running Pre-Trained Models...")
+obs = agent_env.reset()
+states = None  # RecurrentPPO expects states per environment; initialize as None
+episode_start = True  # For the first step
+total_rewards = 0.0  # Accumulate rewards for the single agent
+done = False
+step_counter = 0
+
+# Initialize variables for fuel and tire levels
+fuel_level = 1.0  # Start with full fuel tank
+tire_tread_level = 1.0  # Start with new tires
+
+# Define consumption rates
+fuel_consumption_rate = 0.09  # Adjust as needed
+tire_wear_rate = 0.09  # Adjust as needed
+
+FPS = 50  # Frames per second
+
+while not done:
+    try:
+        # Get the action from the low-level model
+        action, states = low_level_model.predict(
+            obs, state=states, episode_start=episode_start, deterministic=True
+        )
+        episode_start = False  # Reset episode_start after the first step
+
+        # Update fuel and tire levels
+        fuel_level -= fuel_consumption_rate * (1.0 / FPS)
+        fuel_level = max(fuel_level, 0.0)
+        tire_tread_level -= tire_wear_rate * (1.0 / FPS)
+        tire_tread_level = max(tire_tread_level, 0.0)
+
+        if step_counter % 50 == 0:
+            print(f"Car 0: Fuel={fuel_level:.4f}, Tires={tire_tread_level:.4f}")
+
+        # Take a step in the environment with the chosen action
+        obs_raw, rewards_raw, done, _ = multi_env.step([action])
+        # Render the environment without passing 'mode'
+        multi_env.render()
+        time.sleep(0.05)  # Control simulation speed
+
+        # Step the agent environment with the chosen action
+        obs, agent_reward, agent_done, _ = agent_env.step([action])
+        total_rewards += agent_reward
+
+        if agent_done:
+            print(f"Agent 0 is done. Resetting agent.")
+            obs = agent_env.reset()
+            episode_start = True  # Reset episode start for the agent
+            states = None  # Reset the model's internal state
+            # Optionally reset fuel and tire levels for the agent
+            fuel_level = 1.0
+            tire_tread_level = 1.0
+
+        # Increment step counter
+        step_counter += 1
+
+    except Exception as e:
+        print(f"An error occurred during simulation: {e}")
+        traceback.print_exc()  # Print full traceback for debugging
+        break
+
+print("Individual scores for the car:", total_rewards)
