@@ -408,14 +408,14 @@ class MultiCarRacing(gym.Env, EzPickle):
         ]
         return True
 
-    def reset(self, fixed_seed=42):
+    def reset(self):
         self._destroy()
         self.reward = np.zeros(self.num_agents)
         self.prev_reward = np.zeros(self.num_agents)
         self.tile_visited_count = [0] * self.num_agents
         self.t = 0.0
         self.road_poly = []
-        self.np_random, _ = seeding.np_random(fixed_seed)
+
         # Reset driving backwards/on-grass states and track direction
         self.driving_backward = np.zeros(self.num_agents, dtype=bool)
         self.driving_on_grass = np.zeros(self.num_agents, dtype=bool)

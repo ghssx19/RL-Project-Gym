@@ -1,5 +1,6 @@
 import sys, math
 import numpy as np
+from datetime import datetime, timedelta
 
 import Box2D
 from Box2D.b2 import (
@@ -21,6 +22,12 @@ import pyglet
 import keyboard
 from pyglet import gl
 from shapely.geometry import Point, Polygon
+import time
+import warnings
+import os
+import traceback  # For detailed exception tracebacks
+import random
+from datetime import datetime
 
 # Easiest continuous control task to learn from pixels, a top-down racing environment.
 # Discrete control is reasonable in this environment as well, on/off discretization is
@@ -162,6 +169,7 @@ class MultiCarRacing(gym.Env, EzPickle):
     ):
         EzPickle.__init__(self)
         self.seed()
+        self.laptime = 0.0
         self.num_agents = num_agents
         self.contactListener_keepref = FrictionDetector(self)
         self.world = Box2D.b2World((0, 0), contactListener=self.contactListener_keepref)
@@ -416,6 +424,7 @@ class MultiCarRacing(gym.Env, EzPickle):
         self.t = 0.0
         self.road_poly = []
         self.np_random, _ = seeding.np_random(fixed_seed)
+
         # Reset driving backwards/on-grass states and track direction
         self.driving_backward = np.zeros(self.num_agents, dtype=bool)
         self.driving_on_grass = np.zeros(self.num_agents, dtype=bool)
@@ -893,8 +902,15 @@ class MultiCarRacing(gym.Env, EzPickle):
         horiz_ind(20, -10.0 * self.cars[agent_id].wheels[0].joint.angle, (0, 1, 0))
         horiz_ind(30, -0.8 * self.cars[agent_id].hull.angularVelocity, (1, 0, 0))
         gl.glEnd()
-        self.score_label.text = "%04i" % self.reward[agent_id]
-        self.score_label.draw()
+        if fuel_level <= 0:
+            self.score_label.text = "DNF"
+            self.score_label.draw()
+
+        else:
+            self.score_label.text = (
+                f"Fuel: {fuel_level:.2f} The timer is {self.laptime:.2f}"
+            )
+            self.score_label.draw()
 
         # Render backwards flag if driving backward and backwards flag render is enabled
         if self.driving_backward[agent_id] and self.backwards_flag:
@@ -920,14 +936,14 @@ if __name__ == "__main__":
     a = np.zeros((NUM_CARS, 3))
 
     def key_press(k, mod):
-        global restart, stopped, CAR_CONTROL_KEYS
+        global restart, stopped, CAR_CONTROL_KEYS, pitting
         if k == 0xFF1B:
             stopped = True  # Terminate on esc.
         if k == 0xFF0D:
             print("pit stop taken")
             pitting = True
             return pitting
-            restart = True  # Restart on Enter.
+            # restart = True  # Restart on Enter.
 
         # Iterate through cars and assign them control keys (mod num controllers)
         for i in range(min(len(CAR_CONTROL_KEYS), NUM_CARS)):
@@ -967,6 +983,15 @@ if __name__ == "__main__":
     isopen = True
     stopped = False
     laptime = 0
+
+    # Initialize variables for fuel and tire levels outside the loop
+    fuel_level = 1.0  # Start with full fuel tank
+    tire_tread_level = 1.0  # Start with new tires
+    fuel_consumption_rate = random.uniform(0.009, 0.02)  # Adjust as needed
+    tire_wear_rate = random.uniform(0.009, 0.02)  # Adjust as needed
+    print(f"The fuel consumption rate is {fuel_consumption_rate}")
+    print(f"The tire wear rate is {tire_wear_rate}")
+
     while isopen and not stopped:
         start_time = datetime.now()
         pitting = False
@@ -975,50 +1000,46 @@ if __name__ == "__main__":
         steps = 0
         restart = False
         while True:
-
+            pit_stop_time = 0
             if pitting:
-                pitting = False
-                s, r, done, info = env.step(a)
-                total_reward += r
-                if steps % 200 == 0 or done:
-                    print(
-                        "\nActions: "
-                        + str.join(
-                            " ", [f"Car {x}: " + str(a[x]) for x in range(NUM_CARS)]
-                        )
-                    )
-                    print(f"Step {steps} Total_reward " + str(total_reward))
-                    # import matplotlib.pyplot as plt
-                    # plt.imshow(s)
-                    # plt.savefig("test.jpeg")
-                steps += 1
-                isopen = env.render().all()
-                fuel_level = 1.0  # Start with full fuel tank
-                tire_tread_level = 1.0  # Start with new tires
-                pit_penalty = 5  # Start with no pit penalty
-                if stopped or done or restart or isopen == False:
-                    break
-            else:
-                s, r, done, info = env.step(a)
-                total_reward += r
-                if steps % 200 == 0 or done:
-                    print(
-                        "\nActions: "
-                        + str.join(
-                            " ", [f"Car {x}: " + str(a[x]) for x in range(NUM_CARS)]
-                        )
-                    )
-                    print(f"Step {steps} Total_reward " + str(total_reward))
-                    # import matplotlib.pyplot as plt
-                    # plt.imshow(s)
-                    # plt.savefig("test.jpeg")
-                steps += 1
-                isopen = env.render().all()
-
+                # Simulate pit stop
+                print("Taking a pit stop...")
+                fuel_level = 1.0  # Refill fuel tank
+                tire_tread_level = 1.0  # Reset tire tread
+                pit_penalty = 15  # Add a time penalty for the pit stop
+                pit_stop_time += pit_penalty
+                start_time -= timedelta(seconds=pit_penalty)
                 pit_stop_time = 0
-                if stopped or done or restart or isopen == False:
-                    break
-        current_time = datetime.now()
-        timer = (current_time - start_time).total_seconds() + pit_stop_time
-        print("Laptime: " + str(timer))
+
+                pitting = False
+
+            # Step through the environment
+            s, r, done, info = env.step(a)
+            total_reward += r
+
+            if steps % 200 == 0 or done:
+                print(
+                    "\nActions: "
+                    + str.join(" ", [f"Car {x}: " + str(a[x]) for x in range(NUM_CARS)])
+                )
+                print(f"Step {steps} Total_reward {total_reward}")
+            current_time = datetime.now()
+            elapsed_time = (current_time - start_time).total_seconds()
+            env.laptime = elapsed_time + pit_stop_time
+            # Update fuel level and tire tread
+            fuel_level -= fuel_consumption_rate * (1.0 / FPS)
+            fuel_level = max(fuel_level, 0.0)  # Ensure it doesn't go negative
+            tire_tread_level -= tire_wear_rate * (1.0 / FPS)
+            tire_tread_level = max(tire_tread_level, 0.0)
+
+            # Render the environment
+            isopen = env.render().all()
+
+            if stopped or done or restart or not isopen:
+                break
+
+            steps += 1
+
+        print("Laptime: " + str(env.laptime))
+
     env.close()
