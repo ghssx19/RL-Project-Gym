@@ -26,20 +26,28 @@ if not hasattr(gym.spaces.Box, "shape"):
 
 # Custom wrapper to extract and preprocess single-agent observations
 class SingleAgentWrapper(gym.Wrapper):
-    def __init__(self, env):
+    def __init__(self, env, agent_id):
         super(SingleAgentWrapper, self).__init__(env)
+        self.agent_id = agent_id
         self.action_space = env.action_space
 
     def reset(self):
-        return self.env.reset()
+        obs = self.env.reset()
+        return obs[self.agent_id]
 
     def step(self, action):
         # Apply the action only to the specified agent
-        # Assuming the environment expects a list of actions for all agents
-        actions = [action]  # Wrap the single action in a list
+        actions = [
+            action if i == self.agent_id else [0, 0, 0]
+            for i in range(self.env.num_agents)
+        ]
         obs, rewards, done, info = self.env.step(actions)
         # Since 'done' can be a bool or list, ensure it's handled correctly
-        return obs[0], rewards[0], done, info
+        if isinstance(done, bool):
+            agent_done = done
+        else:
+            agent_done = done[self.agent_id]
+        return obs[self.agent_id], rewards[self.agent_id], agent_done, info
 
     def render(self, mode="human"):
         return self.env.render(mode=mode)
@@ -75,7 +83,7 @@ class TransposeImage(gym.ObservationWrapper):
         if observation.ndim == 4:
             # Observation shape is (N, H, W, C)
             observation = np.squeeze(observation, axis=3)
-            # Now shape is (N, H, W)
+            # Now shape is (N, H, W), which is (C, H, W)
         elif observation.ndim == 3:
             # Observation shape is (H, W, C)
             observation = observation.transpose(2, 0, 1)
@@ -85,11 +93,9 @@ class TransposeImage(gym.ObservationWrapper):
 
 
 # Set your desired maximum number of steps per episode
-max_steps_per_episode = 2000  # Adjust as needed
-
 # Initialize the multi-agent environment directly
 multi_env = MultiCarRacing(
-    num_agents=1,
+    num_agents=2,
     direction="CCW",
     use_random_direction=True,
     backwards_flag=True,
@@ -97,60 +103,64 @@ multi_env = MultiCarRacing(
     use_ego_color=False,
 )
 
+# Set the maximum number of steps per episode
+max_steps_per_episode = 2000  # Adjust as needed
+
 # Wrap the environment with TimeLimit to set the maximum episode steps
 multi_env = TimeLimit(multi_env, max_episode_steps=max_steps_per_episode)
 
 # Create per-agent environments
-agent_env = SingleAgentWrapper(multi_env)
-agent_env = ResizeObservation(agent_env, shape=(64, 64))  # Updated shape
-agent_env = GrayScaleObservation(agent_env, keep_dim=True)
-agent_env = FrameStack(agent_env, num_stack=2)
-agent_env = TransposeImage(agent_env)
-
-# Vectorize the environment
-agent_env = DummyVecEnv([lambda: agent_env])
+agent_envs = []
+for agent_id in range(2):
+    agent_env = SingleAgentWrapper(multi_env, agent_id)
+    agent_env = ResizeObservation(agent_env, 64)
+    agent_env = GrayScaleObservation(agent_env, keep_dim=True)
+    agent_env = FrameStack(agent_env, num_stack=2)
+    agent_env = TransposeImage(agent_env)
+    agent_env = DummyVecEnv([lambda agent_env=agent_env: agent_env])
+    agent_envs.append(agent_env)
 
 # Load the pre-trained models
 print("Loading Pre-Trained Models for Both Cars...")
 low_level_model_paths = [
-    "/home/souren/Documents/RL-Project-Gym/rl-baselines3-zoo/logs/ppo_lstm/CarRacing-v0_1/CarRacing-v0.zip"
+    "/home/souren/Documents/RL-Project-Gym/rl-baselines3-zoo/logs/ppo_lstm/CarRacing-v0_1/CarRacing-v0.zip",
+    "/home/souren/Documents/RL-Project-Gym/rl-baselines3-zoo/logs/ppo_lstm/CarRacing-v0_1/CarRacing-v0.zip",
 ]
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    model = RecurrentPPO.load(
-        low_level_model_paths[0],
-        custom_objects={"learning_rate": 0.0, "clip_range": 0.2},
-    )
+low_level_models = []
+for i, path in enumerate(low_level_model_paths):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model = RecurrentPPO.load(
+            path,
+            custom_objects={"learning_rate": 0.0, "clip_range": 0.2},
+        )
+    low_level_models.append(model)
 
 # Run the simulation
 print("Running Pre-Trained Models...")
-obs = agent_env.reset()
-states = (
-    None  # RecurrentPPO expects states per environment, which is 1 after vectorization
-)
-episode_starts = np.ones((agent_env.num_envs, 1), dtype=bool)
-total_rewards = np.zeros((agent_env.num_envs,), dtype=np.float32)
+obs = [env.reset() for env in agent_envs]
+states = [None, None]
+episode_starts = [True, True]
+total_rewards = [0, 0]
 done = False
 
 while not done:
-    action, states = model.predict(
-        obs, state=states, episode_start=episode_starts, deterministic=True
-    )
+    actions = []
+    for i in range(2):
+        action, states[i] = low_level_models[i].predict(
+            obs[i], state=states[i], episode_start=episode_starts[i], deterministic=True
+        )
+        actions.append(action)
+        episode_starts[i] = False  # Reset episode_starts after the first step
 
-    # Take a step in the environment
-    obs, rewards, done, info = agent_env.step(action)
-
-    # Render the environment
-    agent_env.envs[0].render()
-
-    # Accumulate rewards
-    total_rewards += rewards
-
-    # Update episode starts
-    episode_starts = done
-
-    # Sleep to control the simulation speed
+    combined_actions = [actions[i][0] for i in range(2)]
+    obs_raw, rewards_raw, done, _ = multi_env.step(combined_actions)
+    multi_env.render()
     time.sleep(0.05)
+
+    for i in range(2):
+        obs[i], _, _, _ = agent_envs[i].step(actions[i])
+        total_rewards[i] += rewards_raw[i]
 
 print("Individual scores for each car:", total_rewards)
