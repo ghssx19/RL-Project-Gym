@@ -378,7 +378,7 @@ class MultiCarRacing(gym.Env, EzPickle):
         ]
         return True
 
-    def reset(self, fixed_seed=42):
+    def reset(self, fixed_seed=2):
         self._destroy()
         self.reward = np.zeros(self.num_agents)
         self.prev_reward = np.zeros(self.num_agents)
@@ -573,116 +573,6 @@ class MultiCarRacing(gym.Env, EzPickle):
                 print(f"Car {car_id} driving on grass: {self.driving_on_grass[car_id]}")
 
         return self.state, step_reward, done, {}
-
-    # def step(self, action):
-    #     """Run environment for one timestep.
-
-    #     Parameters:
-    #         action(np.ndarray): Numpy array of shape (num_agents,3) containing the
-    #             commands for each car. Each command is of the shape (steer, gas, brake).
-    #     """
-
-    #     if action is not None:
-    #         # NOTE: re-shape action as input action is flattened
-    #         action = np.reshape(action, (self.num_agents, -1))
-    #         if int(self.t * FPS) % 100 == 0:  # Every 100 steps
-    #             for car_id in range(self.num_agents):
-    #                 print(
-    #                     f"Time: {self.t:.2f}s - Car {car_id} has visited {self.tile_visited_count[car_id]} out of {len(self.track)} tiles."
-    #                 )
-    #                 x, y = self.cars[car_id].hull.position
-    #                 print(f"Car {car_id} position: x={x:.2f}, y={y:.2f}")
-    #         for car_id, car in enumerate(self.cars):
-    #             car.steer(-action[car_id][0])
-    #             car.gas(action[car_id][1])
-    #             car.brake(action[car_id][2])
-
-    #     for car in self.cars:
-    #         car.step(1.0 / FPS)
-    #     self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
-    #     self.t += 1.0 / FPS
-
-    #     self.state = self.render("state_pixels")
-
-    #     step_reward = np.zeros(self.num_agents)
-    #     done = False
-    #     if action is not None:  # First step without action, called from reset()
-    #         self.reward -= 0.1
-    #         # We actually don't want to count fuel spent, we want car to be faster.
-    #         # self.reward -=  10 * self.car.fuel_spent / ENGINE_POWER
-
-    #         # self.cars[0].fuel_spent = 0.0
-
-    #         step_reward = self.reward - self.prev_reward
-
-    #         # Add penalty for driving backward
-    #         for car_id, car in enumerate(self.cars):  # Enumerate through cars
-
-    #             # Get car speed
-    #             vel = car.hull.linearVelocity
-    #             if np.linalg.norm(vel) > 0.5:  # If fast, compute angle with v
-    #                 car_angle = -math.atan2(vel[0], vel[1])
-    #             else:  # If slow, compute with hull
-    #                 car_angle = car.hull.angle
-
-    #             # Map angle to [0, 2pi] interval
-    #             car_angle = (car_angle + (2 * np.pi)) % (2 * np.pi)
-
-    #             # Retrieve car position
-    #             car_pos = np.array(car.hull.position).reshape((1, 2))
-    #             car_pos_as_point = Point((float(car_pos[:, 0]), float(car_pos[:, 1])))
-
-    #             # Compute closest point on track to car position (l2 norm)
-    #             distance_to_tiles = np.linalg.norm(
-    #                 car_pos - np.array(self.track)[:, 2:], ord=2, axis=1
-    #             )
-    #             track_index = np.argmin(distance_to_tiles)
-
-    #             # Check if car is driving on grass by checking inside polygons
-    #             on_grass = not np.array(
-    #                 [
-    #                     car_pos_as_point.within(polygon)
-    #                     for polygon in self.road_poly_shapely
-    #                 ]
-    #             ).any()
-    #             self.driving_on_grass[car_id] = on_grass
-
-    #             # Find track angle of closest point
-    #             desired_angle = self.track[track_index][1]
-
-    #             # If track direction reversed, reverse desired angle
-    #             if self.episode_direction == "CW":  # CW direction indicates reversed
-    #                 desired_angle += np.pi
-
-    #             # Map angle to [0, 2pi] interval
-    #             desired_angle = (desired_angle + (2 * np.pi)) % (2 * np.pi)
-
-    #             # Compute smallest angle difference between desired and car
-    #             angle_diff = abs(desired_angle - car_angle)
-    #             if angle_diff > np.pi:
-    #                 angle_diff = abs(angle_diff - 2 * np.pi)
-
-    #             # If car is driving backward and not on grass, penalize car. The
-    #             # backwards flag is set even if it is driving on grass.
-    #             if angle_diff > BACKWARD_THRESHOLD:
-    #                 self.driving_backward[car_id] = True
-    #                 step_reward[car_id] -= K_BACKWARD * angle_diff
-    #             else:
-    #                 self.driving_backward[car_id] = False
-
-    #         self.prev_reward = self.reward.copy()
-    #         if len(self.track) in self.tile_visited_count:
-    #             done = True
-
-    #         # The car that leaves the field experiences a reward of -100
-    #         # and the episode is terminated subsequently.
-    #         for car_id, car in enumerate(self.cars):
-    #             x, y = car.hull.position
-    #             if abs(x) > PLAYFIELD or abs(y) > PLAYFIELD:
-    #                 done = True
-    #                 step_reward[car_id] = -100
-
-    #     return self.state, step_reward, done, {}
 
     def render(self, mode="human"):
         assert mode in ["human", "state_pixels", "rgb_array"]

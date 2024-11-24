@@ -35,7 +35,7 @@ if not hasattr(gym.spaces.Box, "shape"):
 # 2. Load the saved high-level model
 print("Loading the saved high-level model...")
 pit_model_path = (
-    "/home/souren/Documents/RL-Project-Gym/multi_car_racing/bettersimplemodel.zip"
+    "/home/souren/Documents/RL-Project-Gym/main/models/Pit_Stop_Model_PPO_MlpPolicy.zip"
 )
 
 if not os.path.exists(pit_model_path):
@@ -44,7 +44,9 @@ pit_model = PPO.load(pit_model_path)
 print("High-level model loaded successfully!")
 
 # 3. Load the low-level model
-low_level_model_path = "main/models/LSTM_PPO_Low_LeveL_Driver.zip"
+low_level_model_path = (
+    "/home/souren/Documents/RL-Project-Gym/main/models/LSTM_PPO_Low_LeveL_Driver.zip"
+)
 
 if not os.path.exists(low_level_model_path):
     raise FileNotFoundError(f"Low-level model not found at {low_level_model_path}")

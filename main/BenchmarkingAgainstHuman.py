@@ -386,7 +386,7 @@ class MultiCarRacing(gym.Env, EzPickle):
         ]
         return True
 
-    def reset(self, fixed_seed=42):
+    def reset(self, fixed_seed=2):
         self._destroy()
         self.reward = np.zeros(self.num_agents)
         self.prev_reward = np.zeros(self.num_agents)
