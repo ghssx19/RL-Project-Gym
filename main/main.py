@@ -12,6 +12,7 @@ import os
 import traceback
 import random
 from datetime import datetime
+import json
 
 random.seed(time.time_ns())
 fuel_consumption_rate = random.uniform(0.009, 0.2)
@@ -35,7 +36,7 @@ if not hasattr(gym.spaces.Box, "shape"):
 # 2. Load the saved high-level model
 print("Loading the saved high-level model...")
 pit_model_path = (
-    "/home/souren/Documents/RL-Project-Gym/main/models/Pit_Stop_Model_PPO_MlpPolicy.zip"
+    "/home/souren/Documents/RL-Project-Gym/main/models/pit_stop_rl_agent.zip"
 )
 
 if not os.path.exists(pit_model_path):
@@ -168,10 +169,33 @@ fuel_level = 1.0
 tire_tread_level = 1.0
 
 
+import json
+
+
+# Correcting the write function
+def write_status_to_file(file_path, fuel_level, tire_wear, laptime):
+    status = {
+        "fuel_level": fuel_level,
+        "tire_wear": tire_wear,
+        "laptime": laptime,
+    }
+    try:
+        with open(file_path, "w") as f:
+            json.dump(status, f)
+    except Exception as e:
+        print(f"Error writing status to file: {e}")
+
+
+# Call this function to write data before reading
+write_status_to_file("status.json", 75.5, 10.2, 330.7)
+
+from datetime import datetime, timedelta
+
 # Making sure the fuel consumption rate and tire wear rate are within the range
 print(f"the fuel consumption rate is{fuel_consumption_rate}")
 print(f"the tire wear level is{tire_wear_rate}")
 FPS = 50
+timer = 0
 start_time = datetime.now()
 while not done:
 
@@ -186,6 +210,7 @@ while not done:
         fuel_level -= fuel_consumption_rate * (1.0 / FPS)
         fuel_level = max(fuel_level, 0.0)
         tire_tread_level -= tire_wear_rate * (1.0 / FPS)
+
         tire_tread_level = max(tire_tread_level, 0.0)
         high_level_obersevation = np.array(
             [fuel_level, tire_tread_level], dtype=np.float32
@@ -206,7 +231,10 @@ while not done:
             obs_raw, rewards_raw, done, _ = multi_env.step([action])
             multi_env.render()
             time.sleep(0.05)  # Control simulation speed
-
+            pit_penalty = 15  # Add a time penalty for the pit stop
+            pit_stop_time += pit_penalty
+            start_time -= timedelta(seconds=pit_penalty)
+            pit_stop_time = 0
             obs, agent_reward, agent_done, _ = agent_env.step([action])
             total_rewards += agent_reward
 
@@ -227,6 +255,7 @@ while not done:
         #! else here
         else:
             obs_raw, rewards_raw, done, _ = multi_env.step([action])
+
             multi_env.render()
             time.sleep(0.05)
 
@@ -246,7 +275,14 @@ while not done:
             step_counter += 1
             pit_stop_time = 0
         current_time = datetime.now()
-        timer = (current_time - start_time).total_seconds() + pit_stop_time
+        elapsed_time = (current_time - start_time).total_seconds()
+        timer = elapsed_time + pit_stop_time
+        write_status_to_file(
+            "/home/souren/Documents/RL-Project-Gym/multi_car_racing/gym_multi_car_racing/status.json",
+            fuel_level,
+            tire_tread_level,
+            timer,
+        )
     except Exception as e:
         print(f"An error occurred during simulation: {e}")
         traceback.print_exc()

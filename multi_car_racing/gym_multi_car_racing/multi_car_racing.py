@@ -18,7 +18,7 @@ import pyglet
 import keyboard
 from pyglet import gl
 from shapely.geometry import Point, Polygon
-
+import json
 
 STATE_W = 64
 STATE_H = 64
@@ -61,6 +61,48 @@ LATERAL_SPACING = 3  # Starting side distance between pairs of cars
 # Penalizing backwards driving
 BACKWARD_THRESHOLD = np.pi / 2
 K_BACKWARD = 0  # Penalty weight: backwards_penalty = K_BACKWARD * angle_diff  (if angle_diff > BACKWARD_THRESHOLD)
+
+
+def write_status_to_file(self):
+    status = {
+        "fuel_level": self.fuel_level,
+        "tire_wear": self.tire_wear,
+        "laptime": self.laptime,
+    }
+    try:
+        with open("status.json", "w") as f:
+            json.dump(status, f)
+    except Exception as e:
+        print(f"Error writing status to file: {e}")
+
+
+def read_json_data(file_path):
+    """
+    Reads data from a JSON file and returns the values of fuel and tire levels.
+
+    Args:
+    file_path (str): The path to the JSON file.
+
+    Returns:
+    tuple: A tuple containing fuel level and tire level.
+    """
+    try:
+        with open(file_path, "r") as file:
+            data = json.load(file)
+            fuel_level = data.get("fuel_level", 0)  # Default to 0 if not found
+            tire_level = data.get("tire_wear", 0)  # Default to 0 if not found
+            timer = data.get("laptime", 0)  # Default to 0 if not found
+
+        return fuel_level, tire_level, timer
+    except json.JSONDecodeError:
+        print("JSON file is empty or not properly formatted.")
+        return 0, 0
+    except FileNotFoundError:
+        print("JSON file not found.")
+        return 0, 0
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return 0, 0
 
 
 class FrictionDetector(contactListener):
@@ -752,8 +794,18 @@ class MultiCarRacing(gym.Env, EzPickle):
         horiz_ind(20, -10.0 * self.cars[agent_id].wheels[0].joint.angle, (0, 1, 0))
         horiz_ind(30, -0.8 * self.cars[agent_id].hull.angularVelocity, (1, 0, 0))
         gl.glEnd()
-        self.score_label.text = "%04i" % self.reward[agent_id]
-        self.score_label.draw()
+        fuel_level, tire_level, timer = read_json_data(
+            "/home/souren/Documents/RL-Project-Gym/multi_car_racing/gym_multi_car_racing/status.json"
+        )
+        if fuel_level <= 0 or tire_level <= 0:
+            self.score_label.text = f"DNF"
+            self.score_label.draw()
+        else:
+            # self.score_label.text = "%04i" % self.reward[agent_id]
+            self.score_label.text = (
+                f"Fuel: {fuel_level:.4f}, Tire: {tire_level:.4f}, Time: {timer:.2f}"
+            )
+            self.score_label.draw()
 
         # Render backwards flag if driving backward and backwards flag render is enabled
         if self.driving_backward[agent_id] and self.backwards_flag:
