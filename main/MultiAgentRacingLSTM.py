@@ -10,7 +10,7 @@ import numpy as np
 import time
 import warnings
 
-# Monkey-patch gym.spaces.Box to have 'shape' attribute if it doesn't exist
+# Monkey-patch gym.spaces.Box to have 'shape' attribute
 if not hasattr(gym.spaces.Box, "shape"):
 
     @property
@@ -24,7 +24,7 @@ if not hasattr(gym.spaces.Box, "shape"):
     gym.spaces.Box.shape = shape
 
 
-# Custom wrapper to extract and preprocess single-agent observations
+# Wrapper to extract and preprocess single-agent observations
 class SingleAgentWrapper(gym.Wrapper):
     def __init__(self, env, agent_id):
         super(SingleAgentWrapper, self).__init__(env)
@@ -36,13 +36,11 @@ class SingleAgentWrapper(gym.Wrapper):
         return obs[self.agent_id]
 
     def step(self, action):
-        # Apply the action only to the specified agent
         actions = [
             action if i == self.agent_id else [0, 0, 0]
             for i in range(self.env.num_agents)
         ]
         obs, rewards, done, info = self.env.step(actions)
-        # Since 'done' can be a bool or list, ensure it's handled correctly
         if isinstance(done, bool):
             agent_done = done
         else:
@@ -92,7 +90,6 @@ class TransposeImage(gym.ObservationWrapper):
         return observation
 
 
-# Set your desired maximum number of steps per episode
 # Initialize the multi-agent environment directly
 multi_env = MultiCarRacing(
     num_agents=2,
@@ -103,10 +100,9 @@ multi_env = MultiCarRacing(
     use_ego_color=False,
 )
 
-# Set the maximum number of steps per episode
-max_steps_per_episode = 2000  # Adjust as needed
+max_steps_per_episode = 2000
 
-# Wrap the environment with TimeLimit to set the maximum episode steps
+# TimeLimit to set the maximum episode steps
 multi_env = TimeLimit(multi_env, max_episode_steps=max_steps_per_episode)
 
 # Create per-agent environments
@@ -152,7 +148,7 @@ while not done:
             obs[i], state=states[i], episode_start=episode_starts[i], deterministic=True
         )
         actions.append(action)
-        episode_starts[i] = False  # Reset episode_starts after the first step
+        episode_starts[i] = False
 
     combined_actions = [actions[i][0] for i in range(2)]
     obs_raw, rewards_raw, done, _ = multi_env.step(combined_actions)

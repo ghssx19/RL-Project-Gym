@@ -1,6 +1,5 @@
 import sys, math
 import numpy as np
-
 import Box2D
 from Box2D.b2 import (
     edgeShape,
@@ -10,58 +9,30 @@ from Box2D.b2 import (
     revoluteJointDef,
     contactListener,
 )
-
 import gym
 import gym.envs.box2d.car_dynamics as car_dynamics
 from gym import spaces
 from gym.utils import colorize, seeding, EzPickle
 from datetime import datetime
-
 import pyglet
 import keyboard
 from pyglet import gl
 from shapely.geometry import Point, Polygon
 
-# Easiest continuous control task to learn from pixels, a top-down racing environment.
-# Discrete control is reasonable in this environment as well, on/off discretization is
-# fine.
-#
-# State consists of STATE_W x STATE_H pixels.
-#
-# Reward is -0.1 every frame and +1000/N for every track tile visited, where N is
-# the total number of tiles visited in the track. For example, if you have finished in 732 frames,
-# your reward is 1000 - 0.1*732 = 926.8 points.
-#
-# Game is solved when agent consistently gets 900+ points. Track generated is random every episode.
-#
-# Episode finishes when all tiles are visited. Car also can go outside of PLAYFIELD, that
-# is far off the track, then it will get -100 and die.
-#
-# Some indicators shown at the bottom of the window and the state RGB buffer. From
-# left to right: true speed, four ABS sensors, steering wheel position and gyroscope.
-#
-# To play yourself (it's rather fast for humans), type:
-#
-# python gym/envs/box2d/car_racing.py
-#
-# Remember it's powerful rear-wheel drive car, don't press accelerator and turn at the
-# same time.
-#
-# Created by Oleg Klimov. Licensed on the same terms as the rest of OpenAI Gym.
 
-STATE_W = 64  # less than Atari 160x192
+STATE_W = 64
 STATE_H = 64
 VIDEO_W = 600
 VIDEO_H = 400
 WINDOW_W = 1000
 WINDOW_H = 800
 
-SCALE = 6.0  # Track scale
-TRACK_RAD = 900 / SCALE  # Track is heavily morphed circle with this radius
-PLAYFIELD = 2000 / SCALE  # Game over boundary
-FPS = 50  # Frames per second
-ZOOM = 2.7  # Camera zoom
-ZOOM_FOLLOW = True  # Set to False for fixed view (don't use zoom)
+SCALE = 6.0
+TRACK_RAD = 900 / SCALE
+PLAYFIELD = 2000 / SCALE
+FPS = 50
+ZOOM = 2.7
+ZOOM_FOLLOW = True
 
 
 TRACK_DETAIL_STEP = 21 / SCALE
@@ -72,7 +43,6 @@ BORDER_MIN_COUNT = 4
 
 ROAD_COLOR = [0.4, 0.4, 0.4]
 
-# Specify different car colors
 CAR_COLORS = [
     (0.8, 0.0, 0.0),
     (0.0, 0.0, 0.8),
@@ -641,7 +611,6 @@ class MultiCarRacing(gym.Env, EzPickle):
     #         # We actually don't want to count fuel spent, we want car to be faster.
     #         # self.reward -=  10 * self.car.fuel_spent / ENGINE_POWER
 
-    #         # NOTE(IG): Probably not relevant. Seems not to be used anywhere. Commented it out.
     #         # self.cars[0].fuel_spent = 0.0
 
     #         step_reward = self.reward - self.prev_reward

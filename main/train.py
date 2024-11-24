@@ -78,59 +78,6 @@ class SimplePitStopEnv(Env):
         print(f"Fuel Level: {self.fuel_level:.2f}, Tire Wear: {self.tire_wear:.2f}")
 
 
-"""
-    def step(self, action):
-        fuel_consumption_rate = 0.05
-        tire_wear_rate = 0.05
-
-        reward = 0
-        if self.last_action == 1 and action == 1:
-            reward -= 40  # Penalty for consecutive pit stops
-
-        if action == 0 and self.fuel_level > 0.2 and self.tire_wear > 0.2:
-            reward += 50  # Encourage safe driving
-
-        if action == 0:
-            self.fuel_level -= fuel_consumption_rate
-            self.tire_wear -= tire_wear_rate
-            reward += 50
-            if self.fuel_level <= 0.1 or self.tire_wear <= 0.1:
-                reward -= 1000.0  #! this should probably be higher
-            # elif self.fuel_level == 0 or self.tire_wear == 0:
-            #     reward = -10000
-
-        elif action == 1:
-            reward -= 10.0  #! maybe remove this
-            if self.fuel_level > 0.5 and self.tire_wear > 0.5:
-                reward -= 40.0
-            elif self.fuel_level <= 0.1 or self.tire_wear <= 0.1:
-                reward += 100.0
-
-            self.fuel_level = 1.0
-            self.tire_wear = 1.0
-
-        self.step_count += 1
-        if self.step_count >= 1000:
-            self.done = True
-
-        self.last_action = action
-        observation = np.array([self.fuel_level, self.tire_wear], dtype=np.float32)
-
-        n = 1
-
-        if self.step_count % n == 0:
-            print(
-                f"Step: {self.step_count}, "
-                f"Fuel Level: {self.fuel_level:.2f}, "
-                f"Tire Wear: {self.tire_wear:.2f}, "
-                f"Action Taken: {'Pit Stop' if action == 1 else 'Keep Driving'}, "
-                f"Reward: {reward:.2f}"
-            )
-
-        return observation, reward, self.done, {}
-"""
-
-
 # Custom callback to track rewards
 class RewardTrackerCallback(BaseCallback):
     def __init__(self, verbose=0):
@@ -193,7 +140,7 @@ reward_tracker = RewardTrackerCallback()
 model.learn(total_timesteps=500_000, callback=reward_tracker)
 
 # Save the trained model
-model.save("bettersimplemodel")
+model.save("Pit_Stop_Model_PPO_MlpPolicy")
 
 # Plot the training rewards
 reward_tracker.plot_rewards()

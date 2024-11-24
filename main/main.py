@@ -1,9 +1,6 @@
 import gym
-
 import gym_multi_car_racing
 from gym_multi_car_racing import MultiCarRacing
-
-
 from gym.wrappers import TimeLimit, ResizeObservation, GrayScaleObservation, FrameStack
 from sb3_contrib import RecurrentPPO
 from stable_baselines3 import PPO
@@ -12,17 +9,17 @@ import numpy as np
 import time
 import warnings
 import os
-import traceback  # For detailed exception tracebacks
+import traceback
 import random
 from datetime import datetime
 
 random.seed(time.time_ns())
-fuel_consumption_rate = random.uniform(0.009, 0.2)  # Adjust as needed
+fuel_consumption_rate = random.uniform(0.009, 0.2)
 print(f"the fuel consumption rate is{fuel_consumption_rate}")
-# (0.09)  # Adjust as needed
 tire_wear_rate = random.uniform(0.009, 0.2)
-print(f"the tire wear level is{tire_wear_rate}")  # Adjust as needed
-# 1. Monkey-patch gym.spaces.Box to add 'shape' attribute if missing
+print(f"the tire wear level is{tire_wear_rate}")
+
+# Monkey-patching gym.spaces.Box to add 'shape' attribute
 if not hasattr(gym.spaces.Box, "shape"):
 
     @property
@@ -40,15 +37,14 @@ print("Loading the saved high-level model...")
 pit_model_path = (
     "/home/souren/Documents/RL-Project-Gym/multi_car_racing/bettersimplemodel.zip"
 )
+
 if not os.path.exists(pit_model_path):
     raise FileNotFoundError(f"High-level model not found at {pit_model_path}")
 pit_model = PPO.load(pit_model_path)
 print("High-level model loaded successfully!")
 
 # 3. Load the low-level model
-low_level_model_path = (
-    "/home/souren/Documents/RL-Project-Gym/main/models/ppo_lstm-CarRacing-v0 (1).zip"
-)
+low_level_model_path = "main/models/LSTM_PPO_Low_LeveL_Driver.zip"
 
 if not os.path.exists(low_level_model_path):
     raise FileNotFoundError(f"Low-level model not found at {low_level_model_path}")
@@ -60,13 +56,13 @@ with warnings.catch_warnings():
         custom_objects={
             "learning_rate": 0.0,
             "clip_range": 0.2,
-            "lr_schedule": lambda _: 0.0,  # Replace lr_schedule with a constant
+            "lr_schedule": lambda _: 0.0,
         },
     )
 print("Low-level model loaded successfully!")
 
 
-# 4. Custom wrapper to extract and preprocess single-agent observations
+# 4. Wrapper to extract and preprocess single-agent observations
 class SingleAgentWrapper(gym.Wrapper):
     def __init__(self, env):
         super(SingleAgentWrapper, self).__init__(env)
@@ -74,14 +70,13 @@ class SingleAgentWrapper(gym.Wrapper):
 
     def reset(self):
         obs = self.env.reset()
-        # print(f"SingleAgentWrapper.reset() observation shape: {obs.shape}")  # Debug
+        # print(f"SingleAgentWrapper.reset() observation shape: {obs.shape}")
         return obs[0]
 
     def step(self, action):
         # Apply the action to the single agent
         actions = [action]  # Since num_agents=1
         obs, rewards, done, info = self.env.step(actions)
-        # Handle 'done' correctly
         if isinstance(done, bool):
             agent_done = done
         else:
@@ -90,9 +85,7 @@ class SingleAgentWrapper(gym.Wrapper):
         return obs[0], rewards[0], agent_done, info
 
     def render(self, mode="human", **kwargs):
-        """
-        Render the environment. Passes the 'mode' argument to the underlying environment's render method.
-        """
+
         return self.env.render(mode=mode, **kwargs)
 
 
@@ -145,40 +138,38 @@ multi_env = MultiCarRacing(
     backwards_flag=True,
     h_ratio=0.25,
     use_ego_color=False,
-    # render_mode="human"  # Removed to prevent TypeError
 )
 
 # Wrap the environment with TimeLimit to set the maximum episode steps
-max_steps_per_episode = 2000  # Adjust as needed
+max_steps_per_episode = 2000
 multi_env = TimeLimit(multi_env, max_episode_steps=max_steps_per_episode)
 
 # Create the single-agent environment with preprocessing
 agent_env = SingleAgentWrapper(multi_env)
-agent_env = ResizeObservation(agent_env, shape=(64, 64))  # Pass shape as tuple
+agent_env = ResizeObservation(agent_env, shape=(64, 64))
 agent_env = GrayScaleObservation(agent_env, keep_dim=True)
 agent_env = FrameStack(agent_env, num_stack=2)
 agent_env = TransposeImage(agent_env)
-agent_env = DummyVecEnv([lambda: agent_env])  # Vectorize the environment
+agent_env = DummyVecEnv([lambda: agent_env])
 
 # 6. Run the simulation
 print("Running Pre-Trained Models...")
 obs = agent_env.reset()
-states = None  # RecurrentPPO expects states per environment; initialize as None
-episode_start = True  # For the first step
-total_rewards = 0.0  # Accumulate rewards for the single agent
+states = None
+episode_start = True
+total_rewards = 0.0
 done = False
 step_counter = 0
 
 # Initialize variables for fuel and tire levels
-fuel_level = 1.0  # Start with full fuel tank
-tire_tread_level = 1.0  # Start with new tires
+fuel_level = 1.0
+tire_tread_level = 1.0
 
-# Define consumption rates
 
+# Making sure the fuel consumption rate and tire wear rate are within the range
 print(f"the fuel consumption rate is{fuel_consumption_rate}")
-# (0.09)  # Adjust as needed
-print(f"the tire wear level is{tire_wear_rate}")  # Adjust as needed
-FPS = 50  # Frames per second
+print(f"the tire wear level is{tire_wear_rate}")
+FPS = 50
 start_time = datetime.now()
 while not done:
 
@@ -211,11 +202,9 @@ while not done:
             )
             # Take a step in the environment with the chosen action
             obs_raw, rewards_raw, done, _ = multi_env.step([action])
-            # Render the environment without passing 'mode'
             multi_env.render()
             time.sleep(0.05)  # Control simulation speed
 
-            # Step the agent environment with the chosen action
             obs, agent_reward, agent_done, _ = agent_env.step([action])
             total_rewards += agent_reward
 
@@ -228,35 +217,29 @@ while not done:
             #     fuel_level = 1.0
             #     tire_tread_level = 1.0
 
-            # Increment step counter
-            fuel_level = 1.0  # Start with full fuel tank
-            tire_tread_level = 1.0  # Start with new tires
+            fuel_level = 1.0
+            tire_tread_level = 1.0
             step_counter += 1
             pit_stop_time = 5
 
         #! else here
         else:
-            # Take a step in the environment with the chosen action
             obs_raw, rewards_raw, done, _ = multi_env.step([action])
-            # Render the environment without passing 'mode'
             multi_env.render()
-            time.sleep(0.05)  # Control simulation speed
+            time.sleep(0.05)
 
-            # Step the agent environment with the chosen action
             obs, agent_reward, agent_done, _ = agent_env.step([action])
             total_rewards += agent_reward
 
             if agent_done:
                 print(f"Agent 0 is done. Resetting agent.")
                 obs = agent_env.reset()
-                episode_start = True  # Reset episode start for the agent
-                states = None  # Reset the model's internal state
-                # Optionally reset fuel and tire levels for the agent
+                episode_start = True
+                states = None
+
                 fuel_level = 1.0
                 tire_tread_level = 1.0
                 print(f"the lapt time is {timer}")
-
-            # Increment step counter
 
             step_counter += 1
             pit_stop_time = 0
@@ -264,7 +247,7 @@ while not done:
         timer = (current_time - start_time).total_seconds() + pit_stop_time
     except Exception as e:
         print(f"An error occurred during simulation: {e}")
-        traceback.print_exc()  # Print full traceback for debugging
+        traceback.print_exc()
         break
 
 
