@@ -46,7 +46,9 @@ pit_model = PPO.load(pit_model_path)
 print("High-level model loaded successfully!")
 
 # 3. Load the low-level model
-low_level_model_path = "/home/souren/Documents/RL-Project-Gym/rl-baselines3-zoo/logs/ppo_lstm/CarRacing-v0_1/CarRacing-v0.zip"
+low_level_model_path = (
+    "/home/souren/Documents/RL-Project-Gym/main/models/ppo_lstm-CarRacing-v0 (1).zip"
+)
 
 if not os.path.exists(low_level_model_path):
     raise FileNotFoundError(f"Low-level model not found at {low_level_model_path}")
