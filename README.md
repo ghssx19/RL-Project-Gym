@@ -4,8 +4,6 @@
 
 <p id="description">Environment and base models for training and deploying multi or single agent races for hierarchical RL approaches.</p>
 
-<h2>🚀 Demo</h2>
-
 <h2>🧐 Status</h2>
 
 <p>We are currently working on transferring over the project to IsaacLab</p>
@@ -60,7 +58,7 @@ python main/main.py
 
 <h2 align="center">📖 Code Explanation</h2>
 
-<p>The <code>multi_car_racing.py</code> file is used to create the environment for hierarchical RL racing. It supports both single agent and multi-agent configurations. Originally developed by <a href="http://www.www.hhp">www.www.hhp</a>, our team has made modifications and added wrappers to support hierarchical strategies. The <code>MultiAgentRacingLSTM.py</code> file extends our framework to multi-agent racing, which has highlighted issues like agent collisions leading to instability, as the lower-level model requires fine-tuning to penalize collisions. The <code>BenchmarkingAgainstHuman.py</code> file allows users to manually race against the environment while timing their laps. Lastly, <code>train.py</code> is used for training the models.</p>
+<p>The <code>multi_car_racing.py</code> file is used to create the environment for hierarchical RL racing. It supports both single agent and multi-agent configurations. Originally developed in this <a href="https://github.com/igilitschenski/multi_car_racing">REPO</a>, our team has made modifications and added wrappers to support hierarchical strategies. The <code>MultiAgentRacingLSTM.py</code> file extends our framework to multi-agent racing, which has highlighted issues like agent collisions leading to instability, as the lower-level model requires fine-tuning to penalize collisions. The <code>BenchmarkingAgainstHuman.py</code> file allows users to manually race against the environment while timing their laps. Lastly, <code>train.py</code> is used for training the models.</p>
 
 ## Acknowledgements
 
