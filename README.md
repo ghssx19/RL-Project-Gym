@@ -61,3 +61,12 @@ python main/main.py
 <h2 align="center">📖 Code Explanation</h2>
 
 <p>The <code>multi_car_racing.py</code> file is used to create the environment for hierarchical RL racing. It supports both single agent and multi-agent configurations. Originally developed by <a href="http://www.www.hhp">www.www.hhp</a>, our team has made modifications and added wrappers to support hierarchical strategies. The <code>MultiAgentRacingLSTM.py</code> file extends our framework to multi-agent racing, which has highlighted issues like agent collisions leading to instability, as the lower-level model requires fine-tuning to penalize collisions. The <code>BenchmarkingAgainstHuman.py</code> file allows users to manually race against the environment while timing their laps. Lastly, <code>train.py</code> is used for training the models.</p>
+
+## Acknowledgements
+
+I would like to extend my heartfelt thanks to the amazing individuals and communities who made this project possible:
+
+- **[Name](https://github.com/username)** 🧑‍💻 - For their invaluable contributions and guidance throughout the development process. Check out their GitHub for more amazing work!
+- **[Name](https://huggingface.co/username)** 🤗 - For providing cutting-edge tools and models that inspired and supported this project. Explore their Hugging Face profile for more exciting innovations.
+
+Special thanks to the developers and maintainers of the libraries, frameworks, and tools that powered this project. Open-source communities rock! 🚀
