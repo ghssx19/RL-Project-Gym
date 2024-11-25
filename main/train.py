@@ -78,26 +78,39 @@ class SimplePitStopEnv(Env):
         print(f"Fuel Level: {self.fuel_level:.2f}, Tire Wear: {self.tire_wear:.2f}")
 
 
-# Custom callback to track rewards
 class RewardTrackerCallback(BaseCallback):
     def __init__(self, verbose=0):
         super(RewardTrackerCallback, self).__init__(verbose)
-        self.episode_rewards = []
+        self.epoch_rewards = []  # Store rewards per epoch
+        self.epoch_agg_rewards = 0  # Aggregate rewards for the current epoch
+        self.steps_in_epoch = 0
 
     def _on_step(self) -> bool:
-        if (
-            "episode" in self.locals.get("infos", [{}])[0]
-        ):  # Check if info contains episode data
-            for info in self.locals["infos"]:
-                if "episode" in info:
-                    self.episode_rewards.append(info["episode"]["r"])
+        # Accumulate rewards and steps
+        self.epoch_agg_rewards += self.locals["rewards"][
+            0
+        ]  # Assuming single environment
+        self.steps_in_epoch += 1
+
+        # Determine number of environments
+        num_envs = len(self.training_env.envs)
+
+        # Check if epoch ended
+        if self.steps_in_epoch >= num_envs * self.model.n_steps:
+            # Store the average reward per epoch
+            self.epoch_rewards.append(self.epoch_agg_rewards / self.steps_in_epoch)
+            # Reset counters
+            self.epoch_agg_rewards = 0
+            self.steps_in_epoch = 0
+
         return True
 
     def plot_rewards(self):
+        epochs = range(len(self.epoch_rewards))
         plt.figure(figsize=(12, 6))
-        plt.plot(self.episode_rewards, label="Episode Rewards")
-        plt.xlabel("Episode")
-        plt.ylabel("Total Reward")
+        plt.plot(epochs, self.epoch_rewards, label="Epoch Rewards")
+        plt.xlabel("Epoch")
+        plt.ylabel("Average Reward")
         plt.title("Training Rewards Over Time")
         plt.legend()
         plt.grid()
@@ -140,7 +153,7 @@ reward_tracker = RewardTrackerCallback()
 model.learn(total_timesteps=500_000, callback=reward_tracker)
 
 # Save the trained model
-model.save("Pit_Stop_Model_PPO_MlpPolicy")
+model.save("Pit_Stop_Model_PPO_MlpPolicy(gibby)")
 
 # Plot the training rewards
 reward_tracker.plot_rewards()
