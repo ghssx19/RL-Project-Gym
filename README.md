@@ -66,7 +66,7 @@ python main/main.py
 
 We would like to extend our thanks to the individuals and communities who made this project possible:
 
-- **[Name](https://github.com/igilitschenski/multi_car_racing.git)** 🧑‍💻 - For their contributions to the environment used a starting point here.
-- **[Name](https://huggingface.co/sb3/ppo_lstm-CarRacing-v0)** 🤗 - For their contributions to the low-level model used as a starting point here.
+- **[igilitschenski & tseyde ](https://github.com/igilitschenski/multi_car_racing.git)** 🧑‍💻 - For their contributions to the environment used a starting point here.
+- **[sb3](https://huggingface.co/sb3/ppo_lstm-CarRacing-v0)** 🤗 - For their contributions to the low-level model used as a starting point here.
 
-Special thanks to the developers and maintainers of the libraries, frameworks, and tools that powered this project, such as stable-baselines3, pygelt and etc...
+Special thanks to the developers and maintainers of the libraries, frameworks, and tools that powered this project.
