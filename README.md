@@ -18,7 +18,7 @@
 
 <h2>📐 Architecture Diagram</h2>
 
-<p align="center"><img src="YOUR_ARCHITECTURE_IMAGE_LINK" alt="architecture-diagram"></p>
+<p align="center"><img src="Arch_Diagram.png" alt="architecture-diagram"></p>
 
 <h2 align="center">🛠️ Installation Steps:</h2>
 
@@ -64,7 +64,7 @@ python main/main.py
 
 We would like to extend our thanks to the individuals and communities who made this project possible:
 
-- **[igilitschenski & tseyde ](https://github.com/igilitschenski/multi_car_racing.git)** 🧑‍💻 - For their contributions to the environment used a starting point here.
+- **[igilitschenski & tseyde ](https://github.com/igilitschenski/multi_car_racing.git)** 🧑‍💻 - For their contributions to the environment used as a starting point here.
 - **[sb3](https://huggingface.co/sb3/ppo_lstm-CarRacing-v0)** 🤗 - For their contributions to the low-level model used as a starting point here.
 
 Special thanks to the developers and maintainers of the libraries, frameworks, and tools that powered this project.
