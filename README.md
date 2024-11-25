@@ -2,7 +2,7 @@
 
 <p align="center"><img src="https://socialify.git.ci/ghssx19/RL-Project-Gym/image?font=Inter&language=1&name=1&stargazers=1&theme=Auto" alt="project-image"></p>
 
-<p id="description">Environment and base models for training and deploying multi or single agent races for hierarchal RL approaches.</p>
+<p id="description">Environment and base models for training and deploying multi or single agent races for hierarchical RL approaches.</p>
 
 <h2>🚀 Demo</h2>
 
@@ -12,10 +12,8 @@
 
 <h2>🎥 Video Demos</h2>
 
-<!-- Add your video links or embeds below -->
-<p align="center"><a href="YOUR_VIDEO_LINK">View Demo Video</a></p>
-<!-- You can also embed videos directly using HTML iframe if your hosting platform supports it -->
-<!--<p align="center"><iframe width="560" height="315" src="YOUR_VIDEO_EMBED_LINK" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>-->
+<!-- Link to view the video on YouTube -->
+<p align="center"><a href="YOUR_VIDEO_LINK" target="_blank">View Demo Video</a></p>
 
 <h2>🛠️ Installation Steps:</h2>
 
@@ -42,3 +40,13 @@ conda env create -f conda_explicit.txt
 <pre>
 pip install -r pip_frozen.txt
 </pre>
+
+<h2>▶️ Running the Code</h2>
+
+<p>To see the main simulation where a single agent is performing pit stops, run the following command:</p>
+
+<pre>
+python main.py
+</pre>
+
+<p>This will launch the simulation environment where you can observe the agent's behavior and pit stop strategy in action.</p>
