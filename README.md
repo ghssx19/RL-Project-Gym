@@ -6,14 +6,21 @@
 
 <h2>🚀 Demo</h2>
 
-<h2>🧐 Features</h2>
+<h2>🧐 Status</h2>
 
-<p>Here're some of the project's best features:</p>
+<p>We are currently working on transferring over the project to IsaacLab</p>
 
 <h2>🎥 Video Demos</h2>
 
-<!-- Link to view the video on YouTube -->
-<p align="center"><a href="YOUR_VIDEO_LINK" target="_blank">View Demo Video</a></p>
+<!-- Place to view the first GIF -->
+<p align="center"><img src="agent.gif" alt="demo-gif1"></p>
+
+<!-- Place to view the second GIF -->
+<p align="center"><img src="YOUR_SECOND_GIF_LINK" alt="demo-gif2"></p>
+
+<h2>📐 Architecture Diagram</h2>
+
+<p align="center"><img src="YOUR_ARCHITECTURE_IMAGE_LINK" alt="architecture-diagram"></p>
 
 <h2>🛠️ Installation Steps:</h2>
 
