@@ -1,0 +1,51 @@
+# Multi-Car Racing Simulation
+
+Welcome to the Multi-Car Racing Simulation repository! This project contains simulations for single and multi-agent environments in car racing without pit stops. Follow the steps below to get started.
+
+## Clone the Repository
+
+First, ensure you have Git installed on your machine. You can download it from [Git's official site](https://git-scm.com/). After installation, run the following command in your terminal to clone the repository:
+
+git clone [URL_of_Your_Repository] cd multi_car_racing
+
+## Installation
+
+Before running the simulations, you need to install the necessary dependencies. Ensure that you have Anaconda installed to manage your packages and environments. You can download it from [Anaconda's official site](https://www.anaconda.com/).
+
+### Install Dependencies
+
+Navigate to the repository directory and run the following commands:
+
+conda env create -f conda_explicit.txt pip install -r pip_frozen.txt
+
+## Running the Simulations
+
+### Single Agent Simulation
+
+To view the single agent simulation, run the following command:
+
+python main.py
+
+### Multi-Agent Simulation
+
+To view the multi-agent simulation without pit stops, use:
+
+python double_agent.py
+
+### Training the Models
+
+If you wish to train the models from scratch, execute:
+
+### Training the Models
+
+If you wish to train the models from scratch, execute:
+
+python train.py
+
+## Videos
+
+To view recorded videos of the simulations, navigate to the `videos` directory in this repository.
+
+## Contributing
+
+Feel free to fork this project and contribute. Pull requests are welcome!
