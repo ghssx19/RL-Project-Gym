@@ -876,9 +876,7 @@ class MultiCarRacing(gym.Env, EzPickle):
             self.score_label.draw()
 
         else:
-            self.score_label.text = (
-                f"Fuel: {fuel_level:.2f} The timer is {self.laptime:.2f}"
-            )
+            self.score_label.text = f"Fuel: {fuel_level:.4f}, Tire: {tire_tread_level:.4f}, Time: {self.laptime:.2f}"
             self.score_label.draw()
 
         # Render backwards flag if driving backward and backwards flag render is enabled
@@ -956,8 +954,8 @@ if __name__ == "__main__":
     # Initialize variables for fuel and tire levels outside the loop
     fuel_level = 1.0  # Start with full fuel tank
     tire_tread_level = 1.0  # Start with new tires
-    fuel_consumption_rate = random.uniform(0.009, 0.02)  # Adjust as needed
-    tire_wear_rate = random.uniform(0.009, 0.02)  # Adjust as needed
+    fuel_consumption_rate = random.uniform(0.02, 0.1)  # Adjust as needed
+    tire_wear_rate = random.uniform(0.02, 0.1)  # Adjust as needed
     print(f"The fuel consumption rate is {fuel_consumption_rate}")
     print(f"The tire wear rate is {tire_wear_rate}")
 

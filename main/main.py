@@ -15,9 +15,9 @@ from datetime import datetime
 import json
 
 random.seed(time.time_ns())
-fuel_consumption_rate = random.uniform(0.009, 0.2)
+fuel_consumption_rate = random.uniform(0.02, 0.1)
 print(f"the fuel consumption rate is{fuel_consumption_rate}")
-tire_wear_rate = random.uniform(0.009, 0.2)
+tire_wear_rate = random.uniform(0.02, 0.1)
 print(f"the tire wear level is{tire_wear_rate}")
 
 # Monkey-patching gym.spaces.Box to add 'shape' attribute
@@ -36,7 +36,7 @@ if not hasattr(gym.spaces.Box, "shape"):
 # 2. Load the saved high-level model
 print("Loading the saved high-level model...")
 pit_model_path = (
-    "/home/souren/Documents/RL-Project-Gym/main/models/pit_stop_rl_agent.zip"
+    "/home/souren/Documents/RL-Project-Gym/main/models/bettersimplemodel2.zip"
 )
 
 if not os.path.exists(pit_model_path):
@@ -230,7 +230,7 @@ while not done:
             # Take a step in the environment with the chosen action
             obs_raw, rewards_raw, done, _ = multi_env.step([action])
             multi_env.render()
-            time.sleep(0.05)  # Control simulation speed
+            # time.sleep(0.05)  # Control simulation speed
             pit_penalty = 15  # Add a time penalty for the pit stop
             pit_stop_time += pit_penalty
             start_time -= timedelta(seconds=pit_penalty)
@@ -257,7 +257,7 @@ while not done:
             obs_raw, rewards_raw, done, _ = multi_env.step([action])
 
             multi_env.render()
-            time.sleep(0.05)
+            # time.sleep(0.05)
 
             obs, agent_reward, agent_done, _ = agent_env.step([action])
             total_rewards += agent_reward
@@ -290,3 +290,12 @@ while not done:
 
 
 print("Individual scores for the car:", total_rewards)
+fuel_level = 1.0
+tire_tread_level = 1.0
+timer = 0
+write_status_to_file(
+    "/home/souren/Documents/RL-Project-Gym/multi_car_racing/gym_multi_car_racing/status.json",
+    fuel_level,
+    tire_tread_level,
+    timer,
+)
