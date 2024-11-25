@@ -7,18 +7,19 @@
 <h2>🧐 Status</h2>
 
 <p>We are currently working on transferring over the project to IsaacLab</p>
+<p align="center"><img src="git_assets/leatherback.png" alt="demo-gif1"></p>
 
 <h2>🎥 Video Demos</h2>
 
 <h3 align="center">Agent Racing in Real time<h3>
-<p align="center"><img src="agent.gif" alt="demo-gif1"></p>
+<p align="center"><img src="git_assets/agent.gif" alt="demo-gif1"></p>
 
 <h3 align="center">Human Racing in Real time<h3>
-<p align="center"><img src="human.gif" alt="demo-gif2"></p>
+<p align="center"><img src="git_assets/human.gif" alt="demo-gif2"></p>
 
 <h2>📐 Architecture Diagram</h2>
 
-<p align="center"><img src="Arch_Diagram.png" alt="architecture-diagram"></p>
+<p align="center"><img src="git_assets/Arch_Diagram.png" alt="architecture-diagram"></p>
 
 <h2 align="center">🛠️ Installation Steps:</h2>
 
