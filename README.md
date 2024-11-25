@@ -12,10 +12,10 @@
 
 <h2>🎥 Video Demos</h2>
 
-<!-- Place to view the first GIF -->
+<h3 align="center">Agent Racing in Real time<h3>
 <p align="center"><img src="agent.gif" alt="demo-gif1"></p>
 
-<!-- Place to view the second GIF -->
+<h3 align="center">Human Racing in Real time<h3>
 <p align="center"><img src="human.gif" alt="demo-gif2"></p>
 
 <h2>📐 Architecture Diagram</h2>
@@ -39,13 +39,13 @@ cd multi_car_racing
 <p>3. Conda</p>
 
 <pre>
-conda env create -f conda_explicit.txt
+conda env create -f dependencies/explicit-env-conda.txt
 </pre>
 
 <p>4. Pip</p>
 
 <pre>
-pip install -r pip_frozen.txt
+pip install -r dependencies/requirements_pip.txt
 </pre>
 
 <h2>▶️ Running the Code</h2>
@@ -53,7 +53,7 @@ pip install -r pip_frozen.txt
 <p>To see the main simulation where a single agent is performing pit stops, run the following command:</p>
 
 <pre>
-python main.py
+python main/main.py
 </pre>
 
 <p>This will launch the simulation environment where you can observe the agent's behavior and pit stop strategy in action.</p>
