@@ -22,7 +22,7 @@
 
 <p align="center"><img src="YOUR_ARCHITECTURE_IMAGE_LINK" alt="architecture-diagram"></p>
 
-<h2>🛠️ Installation Steps:</h2>
+<h2 align="center">🛠️ Installation Steps:</h2>
 
 <p>1. 🔧 Clone the Repository</p>
 
@@ -58,6 +58,6 @@ python main.py
 
 <p>This will launch the simulation environment where you can observe the agent's behavior and pit stop strategy in action.</p>
 
-<h2>📖 Code Explanation</h2>
+<h2 align="center">📖 Code Explanation</h2>
 
-<p>The <code>multi_car_racing.py</code> file is used to create the environment for hierarchical RL racing. It supports both single agent and multi-agent configurations. Originally developed by <a href="http://www.www.hhp">www.www.hhp</a>, our team has made modifications and added wrappers to support hierarchical strategies. The <code>multi_agent_racing.py</code> file extends our framework to multi-agent racing, which has highlighted issues like agent collisions leading to instability, as the lower-level model requires fine-tuning to penalize collisions. The <code>benchmarkagaisnthuman.py</code> file allows users to manually race against the environment while timing their laps. Lastly, <code>train.py</code> is used for training the models.</p>
+<p>The <code>multi_car_racing.py</code> file is used to create the environment for hierarchical RL racing. It supports both single agent and multi-agent configurations. Originally developed by <a href="http://www.www.hhp">www.www.hhp</a>, our team has made modifications and added wrappers to support hierarchical strategies. The <code>MultiAgentRacingLSTM.py</code> file extends our framework to multi-agent racing, which has highlighted issues like agent collisions leading to instability, as the lower-level model requires fine-tuning to penalize collisions. The <code>BenchmarkingAgainstHuman.py</code> file allows users to manually race against the environment while timing their laps. Lastly, <code>train.py</code> is used for training the models.</p>
